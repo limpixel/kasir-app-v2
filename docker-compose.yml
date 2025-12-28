@@ -1,0 +1,115 @@
+
+
+services:
+  # Laravel Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kasir-app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+      - ./storage/app/public:/var/www/html/storage/app/public
+    networks:
+      - kasir-network
+    depends_on:
+      - mysql
+      - redis
+    environment:
+      - APP_NAME=KasirApp
+      - APP_ENV=local
+      - APP_KEY=base64:BCeEXuMgbDrL8Tca5DWSJzm1Q3Jg6UFC66X/t5sJrWg=
+      - APP_DEBUG=true
+      - APP_URL=http://localhost:8000
+      - DB_CONNECTION=mysql
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=kasir_db
+      - DB_USERNAME=kasir_user
+      - DB_PASSWORD=kasir_password
+      - CACHE_DRIVER=redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=null
+      - SESSION_DRIVER=database
+      - QUEUE_CONNECTION=database
+    ports:
+      - "8000:80"
+
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: kasir-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: kasir_db
+      MYSQL_USER: kasir_user
+      MYSQL_PASSWORD: kasir_password
+      MYSQL_ROOT_PASSWORD: root_password
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/my.cnf
+    ports:
+      - "3306:3306"
+    networks:
+      - kasir-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: kasir-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - kasir-network
+
+  # Nginx Reverse Proxy (Optional - for production)
+  nginx:
+    image: nginx:alpine
+    container_name: kasir-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./:/var/www/html
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./docker/nginx/sites/:/etc/nginx/sites-available/
+      - ./docker/nginx/ssl/:/etc/nginx/ssl/
+    depends_on:
+      - app
+    networks:
+      - kasir-network
+    profiles:
+      - production
+
+  # Node.js for development (Optional - separate service for hot reload)
+  node:
+    image: node:18-alpine
+    container_name: kasir-node
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    ports:
+      - "5173:5173"
+    command: sh -c "npm install && npm run dev"
+    networks:
+      - kasir-network
+    profiles:
+      - development
+
+networks:
+  kasir-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local

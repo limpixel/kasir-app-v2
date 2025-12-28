@@ -1,0 +1,80 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile
+docker-compose.yml
+docker-compose.override.yml
+.dockerignore
+
+# Documentation
+README.md
+CHANGELOG.md
+LICENSE.md
+
+# Dependencies
+node_modules
+vendor
+npm-debug.log
+yarn-error.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs
+*.log
+storage/logs/*
+
+# Cache and temporary files
+bootstrap/cache/config.php
+bootstrap/cache/events.php
+bootstrap/cache/packages.php
+bootstrap/cache/routes.php
+bootstrap/cache/services.php
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/testing/*
+storage/framework/views/*
+
+# Local development files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Testing
+tests
+phpunit.xml
+.phpunit.result.cache
+
+# IDE files
+.vscode
+.idea
+*.sublime-*
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Build artifacts
+public/build
+public/hot
+public/storage
+
+# Database
+database/database.sqlite
+database/data
+
+# Local configuration
+docker/local/*
