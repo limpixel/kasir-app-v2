@@ -25,6 +25,8 @@ class RoleSeeder extends Seeder
         $this->createRoleWithPermissions('transactions-access', '%transactions%');
 
         Role::create(['name' => 'super-admin']);
+
+        Role::create(['name' => 'customer']);
     }
 
     private function createRoleWithPermissions($roleName, $permissionNamePattern)

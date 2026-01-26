@@ -42,5 +42,17 @@ class UserSeeder extends Seeder
         $transactionsPermission = Permission::where('name', 'transactions-access')->first();
 
         $cashier->syncPermissions($transactionsPermission);
+
+
+        // Assign for customer
+        $customer = User::create([
+            'name' => 'Customer',
+            'email' => 'customer@gmail.com',
+            'password' => bcrypt('password'),
+        ]);
+
+        $checkoutPermission = Permission::where('name', 'chart-access')->first();
+
+        $customer->syncPermissions($checkoutPermission);
     }
 }

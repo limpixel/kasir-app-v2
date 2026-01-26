@@ -198,7 +198,7 @@ export default function Welcome({ auth, laravelVersion, phpVersion }) {
                                             <div>
                                                 {item.discountPrice ? (
                                                     <>
-                                                        <span className="text-sm line-through text-white/50 mr-2">
+                                                        <span className="text-[20px] line-through text-white/50 mr-2">
                                                             ${item.price}
                                                         </span>
                                                         <span className="text-lg font-bold text-red-400">
