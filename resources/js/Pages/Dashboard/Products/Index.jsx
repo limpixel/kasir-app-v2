@@ -62,7 +62,7 @@ export default function Index({ products }) {
                                         />
                                     </Table.Td>
                                     <Table.Td>{product.category.name}</Table.Td>
-                                    <Table.Td>{product.description}</Table.Td>
+                                    <Table.Td>{product.image}</Table.Td>
                                     <Table.Td>{product.buy_price}</Table.Td>
                                     <Table.Td>{product.sell_price}</Table.Td>
                                     <Table.Td>{product.stock}</Table.Td>

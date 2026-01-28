@@ -12,6 +12,9 @@ export default {
     darkMode: 'class',
     theme: {
         extend: {
+            colors : {
+                main_bg : '#362F4F',
+            },
             fontFamily: {
                 sans: ['Figtree', ...defaultTheme.fontFamily.sans],
             },

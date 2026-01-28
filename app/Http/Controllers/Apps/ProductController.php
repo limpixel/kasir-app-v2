@@ -16,7 +16,7 @@ class ProductController extends Controller
     {
         $products = Product::when(request()->search, function ($products) {
             $products = $products->where('title', 'like', '%' . request()->search . '%');
-        })->with('category')->latest()->paginate(5);
+        })->with('category')->latest()->paginate(10);
 
         //return inertia
         return Inertia::render('Dashboard/Products/Index', [

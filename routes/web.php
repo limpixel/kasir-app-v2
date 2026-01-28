@@ -7,6 +7,7 @@ use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\FECheckoutController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -20,12 +21,13 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/cart', function() {
-    return Inertia::render('CartPage', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-    ]);
-})->name('cart.index');
+
+Route::get('/cart', [FECheckoutController::class, 'index'])->name('cart.index');
+Route::post('/cart/add', [FECheckoutController::class, 'add'])->name('cart.add');
+Route::delete('/cart/{id}', [FECheckoutController::class, 'remove'])->name('cart.remove');
+Route::delete('/cart', [FECheckoutController::class, 'clear'])->name('cart.clear');
+
+
 
 
 Route::group(['prefix' => 'dashboard', 'middleware' => ['auth']], function () {

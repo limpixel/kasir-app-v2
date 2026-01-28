@@ -89,6 +89,9 @@ export default function Welcome({ auth, laravelVersion, phpVersion }) {
                                     <li><a className="smoothscroll" href="#about">About</a></li>
                                     <li><a className="smoothscroll" href="#menu">Menu</a></li>
                                     <li><a className="smoothscroll" href="#gallery">Gallery</a></li>
+                                    <Link href='/cart' className="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white"> 
+                                        Chart
+                                    </Link>
                                 </ul>
 
                                 <div className="header-contact flex">
@@ -96,9 +99,7 @@ export default function Welcome({ auth, laravelVersion, phpVersion }) {
                                         {auth.user ? (
                                             <li className="current flex ">
 
-                                                <Link href='/chart' className="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white"> 
-                                                    Chart
-                                                </Link>
+                                                
 
                                                 <Link href="/dashboard" className="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white">
                                                     Dashboard
