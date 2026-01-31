@@ -123,13 +123,20 @@ kasir-app/
 - Tracking harga beli & jual
 - Manajemen stok
 
-### 2. **Transaksi/Penjualan**
-- Checkout dengan cart system
+### 2. **Transaksi/Penjualan (Checkout Process)**
+- Checkout dengan cart system (di `/cart`)
 - Pencarian produk real-time
 - Multiple payment methods
 - Diskon per transaksi
 - Generate invoice & print receipt
 - Perhitungan keuntungan otomatis
+
+### 3. **Pencatat Transaksi (Transaction History)**
+- Lihat history semua transaksi yang sudah di-checkout
+- Search by invoice/customer/date
+- Filter by cashier atau date range
+- View detail & reprint invoice
+- Analytics dashboard
 
 ### 3. **Manajemen Pelanggan**
 - CRUD customer data
@@ -168,14 +175,28 @@ User → Login → Middleware Auth Check → Dashboard/Admin Panel
 
 ### Alur Transaksi Penjualan
 ```
-1. User masuk halaman transaksi
+1. User masuk halaman checkout (/cart)
 2. Cari & pilih produk (SearchProduct)
 3. Produk ditambah ke cart (AddToCart)
 4. Kelola cart (Edit qty, Remove item)
 5. Input data pelanggan & diskon
-6. Submit transaksi (Store)
+6. Submit transaksi (Store) → Create transaction record
 7. Generate invoice & print
 8. Update stok & hitung keuntungan (Profit)
+9. Transaksi tercatat di history (/dashboard/transactions)
+```
+
+### Alur Pencatatan Transaksi
+```
+Admin/Cashier → View /dashboard/transactions
+              ↓
+        List semua transaksi completed
+              ↓
+        Search, filter, sort
+              ↓
+        View detail transaksi
+              ↓
+        Reprint invoice jika perlu
 ```
 
 ### Alur Manajemen Data Master
@@ -317,7 +338,10 @@ DELETE /dashboard/customers/{id}     # Hapus
 
 ---
 
-### 🧾 4. FITUR TRANSAKSI (Transaction/Point of Sales)
+### 🧾 4. FITUR TRANSAKSI (Transaction History/Pencatat Transaksi)
+
+#### Deskripsi
+Fitur transaksi berfungsi sebagai **history/log pencatat transaksi yang sudah dilakukan**. User dapat melihat detail semua transaksi yang telah di-checkout, namun tidak dapat melakukan proses checkout di halaman ini. Proses checkout dilakukan di fitur **Cart (Frontend Checkout)**.
 
 #### Database Schema
 ```
@@ -340,13 +364,6 @@ transaction_details table:
 - price (Harga per item saat transaksi)
 - subtotal (quantity × price)
 - created_at, updated_at
-
-carts table:
-- id (Primary Key)
-- session_id (Session user)
-- product_id (Foreign Key ke products)
-- quantity (Jumlah)
-- created_at, updated_at
 ```
 
 #### Relasi Model
@@ -359,86 +376,70 @@ Transaction → Profit (One-to-Many)
 
 #### Routes
 ```
-GET    /dashboard/transactions               # List transaksi
-POST   /dashboard/transactions/searchProduct # Cari produk
-POST   /dashboard/transactions/addToCart     # Tambah ke cart
-DELETE /dashboard/transactions/{cart_id}/destroyCart # Hapus dari cart
-POST   /dashboard/transactions/store         # Submit transaksi
-GET    /dashboard/transactions/{invoice}/print # Print invoice
+GET    /dashboard/transactions               # List semua transaksi yang sudah di-checkout
+GET    /dashboard/transactions/{invoice}/print # Print/view detail invoice
 ```
 
-#### Step-by-Step Workflow
+#### Workflow
 
-##### Step 1: Halaman Transaksi
+##### Step 1: Tampilkan History Transaksi
 ```
-- Tampilkan daftar produk
-- Tampilkan cart saat ini
-- Form input diskon & customer
-```
-
-##### Step 2: Search Product
-```
-POST /transactions/searchProduct
-Input: {query: "nama produk"}
-- Backend cari produk berdasarkan nama/barcode
-- Return daftar produk yang cocok
-- Frontend tampilkan hasil search
-```
-
-##### Step 3: Add to Cart
-```
-POST /transactions/addToCart
-Input: {product_id, quantity}
-- Validasi stok produk (cek apakah stok cukup)
-- Cek apakah produk sudah di cart (update qty atau insert baru)
-- Simpan/update ke tabel carts
-- Return cart terbaru
+- Load semua data transaction dari database
+- Eager load dengan customer & cashier info
+- Paginate hasil (misal 20 per halaman)
+- Tampilkan dalam bentuk tabel dengan kolom:
+  * Invoice number
+  * Customer name
+  * Cashier name
+  * Grand total
+  * Diskon
+  * Cash received
+  * Kembalian (change)
+  * Tanggal & waktu transaksi
+  * Action buttons (View Detail, Print)
 ```
 
-##### Step 4: Manage Cart
+##### Step 2: Filter & Search
 ```
-- Lihat semua item di cart
-- Edit quantity per item
-- Hapus item dari cart dengan DELETE /transactions/{cart_id}/destroyCart
-- Hitung subtotal & grand total real-time
-```
-
-##### Step 5: Input Checkout Data
-```
-- Pilih atau input customer baru
-- Input diskon (Rp atau %)
-- Input jumlah uang yang diterima (cash)
-- Hitung kembalian otomatis
+- Search by invoice number
+- Filter by date range
+- Filter by customer
+- Filter by cashier
+- Sort by tanggal (newest/oldest)
 ```
 
-##### Step 6: Submit Transaksi
+##### Step 3: View Detail Transaksi
 ```
-POST /transactions/store
-Input: {customer_id, discount, cash, cart_items}
-
-Backend Process:
-1. Validasi semua data
-2. Hitung total harga dari semua cart items
-3. Hitung grand total setelah diskon
-4. Generate unique invoice number
-5. Create transaction record
-6. Loop setiap item di cart:
-   - Create transaction_detail
-   - Update stok produk (kurangi)
-   - Calculate profit per item
-   - Create profit record
-7. Clear cart setelah selesai
-8. Return transaction data
-```
-
-##### Step 7: Print Invoice
-```
-GET /transactions/{invoice}/print
+GET /dashboard/transactions/{invoice}/print
 - Query transaction berdasarkan invoice number
-- Include transaction_details & customer info
-- Include calculated profit
-- Generate HTML untuk print
-- Display receipt format
+- Load transaction_details dengan product info
+- Display detail breakdown:
+  * Invoice number & tanggal
+  * Customer info (nama, phone, address)
+  * Cashier info
+  * Item-by-item breakdown (produk, qty, harga, subtotal)
+  * Diskon
+  * Grand total
+  * Payment info (cash, change)
+  * Calculated profit per item & total
+```
+
+##### Step 4: Print Invoice
+```
+- Generate formatted receipt/invoice untuk print
+- Include semua detail transaksi
+- Barcode invoice (optional)
+- POS printer format (80mm thermal printer compatible)
+- Browser print dialog untuk user
+```
+
+##### Step 5: Analytics/Reporting
+```
+- Total transaksi hari ini
+- Total revenue hari ini
+- Total profit hari ini
+- Top products (paling banyak terjual)
+- Top customers (paling sering beli)
 ```
 
 ---
@@ -557,58 +558,249 @@ GET    /dashboard/permissions       # List permissions
 
 ---
 
-### 🛒 8. FITUR CART (Frontend Checkout)
+### 🛒 8. FITUR CART (Frontend Checkout/Point of Sales)
+
+#### Deskripsi
+Fitur cart adalah **proses checkout/point of sales** dimana user (cashier) dapat:
+- Mencari produk
+- Menambah produk ke cart
+- Mengelola qty & item di cart
+- Input diskon & info customer
+- Submit transaksi
+- Generate & print invoice
+
+Proses ini akan membuat record di tabel `transactions` dan `transaction_details`.
+
+#### Database Tables
+```
+carts table (temporary):
+- id (Primary Key)
+- session_id (Session user)
+- product_id (Foreign Key ke products)
+- quantity (Jumlah)
+- created_at, updated_at
+
+transactions table (after checkout):
+- id, cashier_id, customer_id, invoice, cash, change, discount, grand_total
+- created_at, updated_at
+
+transaction_details table (after checkout):
+- id, transaction_id, product_id, quantity, price, subtotal
+- created_at, updated_at
+```
 
 #### Routes
 ```
-GET    /cart                  # Tampilkan cart
-POST   /cart/add              # Add item to cart
-DELETE /cart/{id}             # Remove item dari cart
-DELETE /cart                  # Clear semua cart
+GET    /cart                              # Tampilkan halaman cart/checkout
+POST   /cart/add                          # Add item ke cart
+DELETE /cart/{id}                         # Remove item dari cart
+DELETE /cart                              # Clear semua cart
+
+# Backend routes (bisa dipindah ke transaction controller jika perlu)
+POST   /transactions/searchProduct        # Cari produk
+POST   /transactions/addToCart            # Tambah ke cart (alt endpoint)
+DELETE /transactions/{cart_id}/destroyCart # Hapus dari cart (alt endpoint)
+POST   /transactions/store                # Submit transaksi & create record
+GET    /transactions/{invoice}/print      # Print invoice setelah checkout
 ```
 
-#### Database (Dexie.js - Client-side)
+#### Step-by-Step Workflow
+
+##### Step 1: Buka Halaman Checkout
 ```
-Menggunakan IndexedDB untuk offline cart persistence
-- Store cart items locally
-- Sync ke server saat checkout
+GET /cart
+- Tampilkan daftar produk (kategori, search bar)
+- Tampilkan cart items saat ini (dari session/IndexedDB)
+- Tampilkan form customer selection
+- Tampilkan form diskon & payment
 ```
 
-#### Workflow
-- Customer browse produk di frontend public
-- Add items to cart (local storage)
-- Checkout process
-- Redirect ke transaksi atau payment gateway
+##### Step 2: Search Product
+```
+POST /transactions/searchProduct
+Input: {query: "nama produk atau barcode"}
+
+Backend:
+- Query products where title LIKE '%query%' OR barcode = query
+- Return hasil dengan product details (nama, harga, stok)
+- Frontend tampilkan hasil search
+```
+
+##### Step 3: Add to Cart
+```
+POST /cart/add (atau POST /transactions/addToCart)
+Input: {product_id, quantity}
+
+Backend:
+1. Validasi stok: if (product.stock < quantity) return error
+2. Cek apakah product sudah di cart:
+   - Jika ada: update quantity
+   - Jika belum: insert baru ke carts table
+3. Return updated cart dengan total harga
+```
+
+##### Step 4: Manage Cart
+```
+Frontend cart management:
+- Lihat semua items dengan detail (nama, harga, qty, subtotal)
+- Edit quantity per item
+- Remove item dengan DELETE /cart/{cart_id}
+- Real-time calculation: total = sum(subtotal)
+```
+
+##### Step 5: Input Checkout Details
+```
+Form input:
+- Pilih Customer (dropdown atau form tambah baru)
+- Input Diskon (nominal Rp atau %)
+- Input Jumlah Uang (cash)
+- Auto calculate kembalian (change = cash - grand_total)
+- Validasi cash >= grand_total after diskon
+```
+
+##### Step 6: Submit Transaksi
+```
+POST /transactions/store
+Input: {
+  customer_id,
+  discount (nominal),
+  cash,
+  cart_items: [{product_id, quantity, price}, ...]
+}
+
+Backend Process:
+1. Validasi semua data (customer, items, cash)
+2. Hitung totals:
+   - subtotal_items = sum(price × qty per item)
+   - grand_total = subtotal_items - discount
+   - change = cash - grand_total
+3. Generate invoice number (format: INV-YYYYMMDD-XXXXX)
+4. Create transaction record
+5. Loop setiap item di cart:
+   - Create transaction_detail (product_id, qty, price, subtotal)
+   - Decrement product stock: product.stock -= qty
+   - Calculate profit: profit_amount = sell_price - buy_price
+   - Create profit record: total_profit = profit_amount × qty
+6. Clear cart dari session/IndexedDB
+7. Return success + invoice_number + transaction_id
+8. Frontend redirect ke print page atau show receipt modal
+```
+
+##### Step 7: Print Invoice
+```
+GET /transactions/{invoice}/print
+- Load transaction dengan relasi details.product & customer
+- Format untuk POS receipt (80mm thermal):
+  * Header (nama toko, logo)
+  * Invoice: INV-XXXXX | Tanggal: DD/MM/YYYY HH:mm
+  * Cashier: nama cashier
+  * Customer: nama customer (if ada)
+  * ---
+  * Items breakdown:
+    Product Name          Qty  Price    Subtotal
+    Item 1               2x   50.000   100.000
+    Item 2               1x   100.000  100.000
+  * ---
+  * Subtotal:                          200.000
+  * Diskon:                           (10.000)
+  * Grand Total:                       190.000
+  * Cash:                              200.000
+  * Change:                            10.000
+  * ---
+  * Profit: 35.000
+  * ---
+  * Terima kasih!
+  
+- Browser print dialog (CTRL+P)
+```
+
+##### Step 8: Integration dengan Transaction History
+```
+Setelah checkout selesai & invoice di-print:
+- Transaction sudah tersimpan di database
+- User bisa lihat di "Transaction History" page
+- Data sinkron untuk analytics & reporting
+```
 
 ---
 
 ## 📊 Alur Data Flow Per Fitur
 
-### Alur Transaksi Lengkap
+### Alur Transaksi Penjualan Lengkap (Cart → Transaction Recording)
 
 ```
-┌─────────────────┐
-│ Kasir Dashboard │
-│  Halaman Trx   │
-└────────┬────────┘
+┌─────────────────────────┐
+│ Checkout Page (/cart)   │
+│  Point of Sales View    │
+└────────┬────────────────┘
          │
-         ├─→ [Search Product] ──→ Backend search ──→ Return hasil
+         ├─→ [Search Product] ──POST /transactions/searchProduct──→ Backend search
+         │                                                          ↓
+         │                                    Return filtered products
          │
-         ├─→ [Add to Cart] ──→ Validate stok ──→ Save to carts table
+         ├─→ [Add to Cart] ──POST /cart/add──→ Validate stok ──→ Save to carts table
+         │                                      ↓
+         │                              Return updated cart
          │
-         ├─→ [View Cart Items] ──→ Calculate totals ──→ Display
+         ├─→ [Manage Cart Items]
+         │  ├─→ View all items, qty, price
+         │  └─→ Remove item ──DELETE /cart/{id}──→ Update cart
          │
-         ├─→ [Submit Checkout]
-         │     │
-         │     ├─→ Validate data
-         │     ├─→ Create transaction record
-         │     ├─→ Create transaction_details (per item)
-         │     ├─→ Update stok produk
-         │     ├─→ Calculate & save profit
-         │     ├─→ Clear cart
-         │     └─→ Return success
+         ├─→ [Input Checkout Details]
+         │  ├─→ Select Customer
+         │  ├─→ Input Diskon
+         │  ├─→ Input Cash Amount
+         │  └─→ Auto calculate Change
          │
-         └─→ [Print Invoice] ──→ Generate HTML ──→ Browser print dialog
+         ├─→ [Submit Transaksi] ──POST /transactions/store──→ Backend Process:
+         │                              │
+         │                              ├─→ Validate data
+         │                              ├─→ Calculate totals
+         │                              ├─→ Generate invoice number
+         │                              ├─→ Create transaction record
+         │                              ├─→ Create transaction_details (per item)
+         │                              ├─→ Update stok produk (decrement)
+         │                              ├─→ Calculate & save profit
+         │                              ├─→ Clear cart
+         │                              └─→ Return success + invoice
+         │
+         └─→ [Print Invoice] ──GET /transactions/{invoice}/print──→ Format receipt
+                                                                      ↓
+                                                          Browser print dialog
+
+┌─────────────────────────────────────────────────┐
+│ Transaction History Page                        │
+│ (/dashboard/transactions)                       │
+│ - List semua transaksi yang sudah di-checkout  │
+│ - Filter, search, analytics                    │
+│ - View detail & reprint invoice                │
+└─────────────────────────────────────────────────┘
+```
+
+### Comparison: Old Flow vs New Flow
+
+**OLD (Transaksi = Checkout Process):**
+```
+/dashboard/transactions
+├─ Search product
+├─ Add to cart
+├─ Checkout (create transaction)
+└─ Print invoice
+```
+
+**NEW (Separated Concerns):**
+```
+/cart (Frontend Checkout Process)
+├─ Search product
+├─ Add to cart
+├─ Checkout (create transaction)
+└─ Print invoice
+     ↓
+/dashboard/transactions (Transaction History Only)
+├─ List all completed transactions
+├─ Search by invoice/date/customer
+├─ View detail & reprint invoice
+└─ Analytics & reporting
 ```
 
 ### Alur CRUD Produk
