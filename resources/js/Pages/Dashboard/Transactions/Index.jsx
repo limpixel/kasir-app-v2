@@ -10,7 +10,7 @@ import InputSelect from '@/Components/Dashboard/InputSelect';
 import Table from '@/Components/Dashboard/Table';
 import toast from 'react-hot-toast';
 
-export default function Index({ carts, carts_total, customers }) {
+export default function Index({ carts, carts_total, customers, transactions }) {
     const { errors, auth } = usePage().props;
 
     const [barcode, setBarcode] = useState('');
@@ -21,6 +21,26 @@ export default function Index({ carts, carts_total, customers }) {
     const [change, setChange] = useState(0);
     const [discount, setDiscount] = useState(0);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
+
+    // transactions for admin monitoring
+    const [transactionsList, setTransactionsList] = useState(() => transactions || []);
+
+    const updateTransactionStatus = async (id, status) => {
+        try {
+            const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            const resp = await axios.patch(`/dashboard/transactions/${id}/status`, { status }, { headers: { 'X-CSRF-TOKEN': csrf } });
+
+            if (resp.data?.success) {
+                setTransactionsList(prev => prev.map(t => t.id === id ? { ...t, status: resp.data.status, payment_status: resp.data.payment_status ?? t.payment_status } : t));
+                toast.success('Status transaksi berhasil diperbarui');
+            } else {
+                toast.error('Gagal memperbarui status');
+            }
+        } catch (err) {
+            console.error('updateTransactionStatus error', err.response || err);
+            toast.error('Error saat mengubah status');
+        }
+    };
 
     // Helper function to format price
     const formatPrice = (price) => {
@@ -272,6 +292,54 @@ export default function Index({ carts, carts_total, customers }) {
                             Bayar
                         </Button>
                     </Card>
+
+                    {/* Riwayat Transaksi untuk monitoring admin */}
+                    <Table.Card title={'Riwayat Transaksi'} className={'mt-5'}>
+                        <Table>
+                            <Table.Thead>
+                                <tr>
+                                    <Table.Th className='w-10'>No</Table.Th>
+                                    <Table.Th>Invoice</Table.Th>
+                                    <Table.Th>Pelanggan</Table.Th>
+                                    <Table.Th>Tanggal</Table.Th>
+                                    <Table.Th>Total</Table.Th>
+                                    <Table.Th>Status</Table.Th>
+                                    <Table.Th>Aksi</Table.Th>
+                                </tr>
+                            </Table.Thead>
+                            <Table.Tbody>
+                                {transactionsList.map((t, idx) => (
+                                    <tr key={t.id}>
+                                        <Table.Td className='w-10'>{idx + 1}</Table.Td>
+                                        <Table.Td>{t.invoice}</Table.Td>
+                                        <Table.Td>{t.customer?.name || 'Umum'}</Table.Td>
+                                        <Table.Td>{t.created_at}</Table.Td>
+                                        <Table.Td>{formatPrice(t.grand_total || 0)}</Table.Td>
+                                        <Table.Td>
+                                            <span className={`px-2 py-1 rounded text-sm font-medium ${t.status === 'completed' ? 'bg-green-100 text-green-700' : t.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-rose-100 text-rose-700'}`}>
+                                                {t.status}
+                                            </span>
+                                        </Table.Td>
+                                        <Table.Td>
+                                            <select
+                                                className="border rounded px-2 py-1 text-sm"
+                                                value={t.status}
+                                                onChange={(e) => updateTransactionStatus(t.id, e.target.value)}
+                                            >
+                                                <option value="pending">pending</option>
+                                                <option value="completed">completed</option>
+                                                <option value="cancelled">cancelled</option>
+                                            </select>
+                                            <button
+                                                onClick={() => window.open(`/dashboard/transactions/${t.invoice}/print`, '_blank')}
+                                                className="ml-2 text-sm px-2 py-1 border rounded bg-white"
+                                            >Print</button>
+                                        </Table.Td>
+                                    </tr>
+                                ))}
+                            </Table.Tbody>
+                        </Table>
+                    </Table.Card>
                 </div>
             </div >
         </>

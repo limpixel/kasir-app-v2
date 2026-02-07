@@ -89,9 +89,14 @@ export default function Welcome({ auth, laravelVersion, phpVersion }) {
                                     <li><a className="smoothscroll" href="#about">About</a></li>
                                     <li><a className="smoothscroll" href="#menu">Menu</a></li>
                                     <li><a className="smoothscroll" href="#gallery">Gallery</a></li>
-                                    <Link href='/cart' className="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white"> 
-                                        Chart
-                                    </Link>
+                                    
+                                    {auth.user && auth.user.id === 3 ?(
+                                        <Link href='/cart' className="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white"> 
+                                            Chart
+                                        </Link>
+                                    ) : (
+                                        <></>
+                                    )}
                                 </ul>
 
                                 <div className="header-contact flex">
@@ -434,11 +439,13 @@ export default function Welcome({ auth, laravelVersion, phpVersion }) {
                                     <img src="/images/perfume-image/gallery-ratio-only/lattafa-asad.png" alt="" />
                                 </a>
                             </div>
-                            <div className="gallery-items__item grid-cols__column">
-                                <a href="/images/perfume-image/gallery-ratio-only/proud-of-you-intense.png" className="gallery-items__item-thumb glightbox">
-                                    <img src="/images/perfume-image/gallery-ratio-only/proud-of-you-intense.png" alt="" />
-                                </a>
-                            </div>
+                            
+                            
+
+                        </div>
+
+                        <div className='flex justify-center items-center border-2 border-white w-full mt-20'>
+                                <Link href="/cart" className="btn btn-primary btn-large">Checkout your Parfume</Link>
                         </div>
                     </section>
 

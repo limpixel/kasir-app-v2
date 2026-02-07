@@ -22,12 +22,18 @@ Route::get('/', function () {
 });
 
 
-Route::get('/cart', [FECheckoutController::class, 'index'])->name('cart.index');
-Route::post('/cart/add', [FECheckoutController::class, 'add'])->name('cart.add');
-Route::delete('/cart/{id}', [FECheckoutController::class, 'remove'])->name('cart.remove');
-Route::delete('/cart', [FECheckoutController::class, 'clear'])->name('cart.clear');
+Route::middleware(['auth'])->group(function () {
+    Route::get('/cart', [FECheckoutController::class, 'index'])->name('cart.index');
+    Route::post('/cart/add', [FECheckoutController::class, 'add'])->name('cart.add');
+    Route::delete('/cart/{id}', [FECheckoutController::class, 'remove'])->name('cart.remove');
+    Route::delete('/cart', [FECheckoutController::class, 'clear'])->name('cart.clear');
+    Route::post('/cart/save-transaction', [FECheckoutController::class, 'saveTransaction'])->name('cart.save-transaction');
+    Route::get('/cart/transactions', [FECheckoutController::class, 'getTransactions'])->name('cart.transactions');
+});
 
 
+
+ 
 
 
 Route::group(['prefix' => 'dashboard', 'middleware' => ['auth']], function () {
@@ -58,6 +64,9 @@ Route::group(['prefix' => 'dashboard', 'middleware' => ['auth']], function () {
     //route transaction store
     Route::post('/transactions/store', [\App\Http\Controllers\Apps\TransactionController::class, 'store'])->name('transactions.store');
     Route::get('/transactions/{invoice}/print', [\App\Http\Controllers\Apps\TransactionController::class, 'print'])->name('transactions.print');
+
+    // update transaction status (AJAX)
+    Route::patch('/transactions/{id}/status', [\App\Http\Controllers\Apps\TransactionController::class, 'updateStatus'])->name('transactions.updateStatus');
 
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

@@ -9,6 +9,8 @@ use App\Models\Customer;
 use App\Models\Transaction;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 
 class TransactionController extends Controller
@@ -28,10 +30,17 @@ class TransactionController extends Controller
         }
 
 
+        // recent transactions for dashboard monitoring
+        $transactions = Transaction::with('details.product', 'customer', 'cashier')
+            ->latest()
+            ->take(20)
+            ->get();
+
         return Inertia::render('Dashboard/Transactions/Index', [
             'carts' => $carts,
             'carts_total' => $carts_total,
-            'customers' => $customers
+            'customers' => $customers,
+            'transactions' => $transactions,
         ]);
     }
 
@@ -190,6 +199,89 @@ class TransactionController extends Controller
 
         return Inertia::render('Dashboard/Transactions/Print', [
             'transaction' => $transaction
+        ]);
+    }
+
+    /**
+     * Update the status of a transaction (AJAX).
+     * Expects JSON: { status: 'pending'|'completed'|'cancelled' }
+     */
+    public function updateStatus(Request $request, $id)
+    {
+        $data = $request->validate([
+            'status' => ['required', 'string', 'in:pending,completed,cancelled']
+        ]);
+
+        $transaction = Transaction::where('id', $id)->first();
+
+        if (! $transaction) {
+            return response()->json(['success' => false, 'message' => 'Transaction not found.'], 404);
+        }
+        // Determine allowed enum values for `status` column (MySQL)
+        $allowed = null;
+        try {
+            $col = DB::select("SHOW COLUMNS FROM `{$transaction->getTable()}` WHERE Field = 'status'");
+            if (!empty($col) && isset($col[0]->Type)) {
+                // Type looks like: enum('unpaid','paid','sending')
+                if (preg_match("/^enum\((.*)\)$/", $col[0]->Type, $matches)) {
+                    $vals = str_getcsv($matches[1], ',', "'");
+                    $allowed = array_map(function($v){ return trim($v, "'"); }, $vals);
+                }
+            }
+        } catch (\Exception $e) {
+            // ignore, will validate later
+            $allowed = null;
+        }
+
+        $incoming = $data['status'];
+
+        // Map legacy UI statuses to DB enum values when necessary
+        $map = [
+            'pending' => 'unpaid',
+            'completed' => 'paid',
+            'cancelled' => 'unpaid',
+        ];
+
+        $dbValue = $incoming;
+        if (is_array($allowed)) {
+            if (!in_array($incoming, $allowed, true)) {
+                // try mapping
+                if (isset($map[$incoming]) && in_array($map[$incoming], $allowed, true)) {
+                    $dbValue = $map[$incoming];
+                } else {
+                    return response()->json(['success' => false, 'message' => 'Requested status not supported by database.'], 422);
+                }
+            }
+        } else {
+            // no schema info; try mapping known synonyms
+            if (isset($map[$incoming])) {
+                $dbValue = $map[$incoming];
+            }
+        }
+
+        $transaction->status = $dbValue;
+
+        // If the transactions table has a payment_status column, update it accordingly
+        if (Schema::hasColumn($transaction->getTable(), 'payment_status')) {
+            $paymentStatus = 'pending';
+            if ($incoming === 'completed' || $dbValue === 'paid') {
+                $paymentStatus = 'paid';
+            } elseif ($incoming === 'cancelled') {
+                $paymentStatus = 'cancelled';
+            } elseif ($incoming === 'pending') {
+                $paymentStatus = 'pending';
+            }
+
+            $transaction->payment_status = $paymentStatus;
+        }
+
+        $transaction->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Status updated.',
+            'status' => $transaction->status,
+            'payment_status' => Schema::hasColumn($transaction->getTable(), 'payment_status') ? $transaction->payment_status : null,
         ]);
     }
 }
