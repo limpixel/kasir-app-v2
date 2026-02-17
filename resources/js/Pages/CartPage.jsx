@@ -1,6 +1,7 @@
 // V BACKUP - BARU
 import { Link, Head, usePage } from "@inertiajs/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { IconUpload, IconPhoto, IconX } from '@tabler/icons-react';
 
 export default function CartPage({ auth }) {
     const {
@@ -61,6 +62,13 @@ export default function CartPage({ auth }) {
     
     // State untuk mengelola penggunaan alamat dari profil
     const [useProfileAddress, setUseProfileAddress] = useState(false);
+    
+    // State untuk upload bukti pembayaran
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [previewUrl, setPreviewUrl] = useState(null);
+    const [dragActive, setDragActive] = useState(false);
+    const fileInputRef = useRef(null);
+    
     const bankDetails = {
         bank: "BCA",
         account: "1234567890",
@@ -91,6 +99,43 @@ export default function CartPage({ auth }) {
                 .map((p) => (p.id === productId ? { ...p, qty: p.qty - 1 } : p))
                 .filter((p) => p.qty > 0),
         );
+    };
+
+    /* ===============================
+        FILE UPLOAD HANDLER
+    =============================== */
+
+    const handleFileChange = (file) => {
+        if (file && file.type.startsWith('image/')) {
+            setSelectedFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPreviewUrl(reader.result);
+            };
+            reader.readAsDataURL(file);
+        } else {
+            alert('Mohon upload file gambar (JPG, PNG, atau GIF)');
+        }
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDragActive(false);
+
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            handleFileChange(e.dataTransfer.files[0]);
+        }
+    };
+
+    const handleDrag = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.type === "dragenter" || e.type === "dragover") {
+            setDragActive(true);
+        } else if (e.type === "dragleave") {
+            setDragActive(false);
+        }
     };
 
     /* ===============================
@@ -153,6 +198,12 @@ export default function CartPage({ auth }) {
             return;
         }
 
+        // Validate required fields
+        if (!checkoutData.name || !checkoutData.phone || !checkoutData.address) {
+            alert("Mohon lengkapi semua data pengiriman (Nama, No WhatsApp, Alamat).");
+            return;
+        }
+
         // Determine which city/province to use based on useProfileAddress
         const city = useProfileAddress ? auth.user?.city : checkoutData.city;
         const province = useProfileAddress ? auth.user?.province : checkoutData.province;
@@ -164,6 +215,14 @@ export default function CartPage({ auth }) {
             } else {
                 alert("Mohon pilih lokasi pengiriman (Kota & Provinsi).");
             }
+            return;
+        }
+
+        // Validate payment proof upload for non-COD payments
+        if (checkoutData.payment !== 'COD' && !selectedFile) {
+            alert("Mohon upload bukti pembayaran terlebih dahulu sebelum menyelesaikan transaksi.");
+            // Scroll to upload area
+            document.getElementById('payment-proof-upload')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return;
         }
 
@@ -269,52 +328,12 @@ export default function CartPage({ auth }) {
                 return;
             }
 
-            const adminPhone = "628115133959";
-            const userPhone = checkoutData.phone.startsWith("08")
-                ? "62" + checkoutData.phone.slice(1)
-                : checkoutData.phone.startsWith("+62")
-                  ? checkoutData.phone.replace("+", "")
-                  : checkoutData.phone;
-
-            const productList = cart
-                .map((p) => `- ${p.title} x${p.qty}`)
-                .join("%0A");
-
-            // Determine shipping option label for message
-            const shippingOptionLabels = {
-                reguler: "Reguler (2-3 hari kerja)",
-                express: "Express (1 hari kerja)",
-                same_day: "Same Day (hari yang sama)",
-            };
-            const shippingOptionLabel =
-                shippingOptionLabels[checkoutData.shippingOption] ||
-                "Reguler (2-3 hari kerja)";
-
-            const message = `
-            Halo Admin, saya ingin order:
-
-            Nama: ${checkoutData.name}
-            No HP: ${userPhone}
-            Alamat: ${checkoutData.address}, ${checkoutData.city}, ${checkoutData.province}
-            Jenis Pengantaran: ${shippingOptionLabel}
-            Pembayaran: ${checkoutData.payment}
-            Ongkos Kirim: Rp ${shippingCost.toLocaleString("id-ID")}
-
-            Pesanan:
-            ${productList}
-
-            Total: Rp ${grandTotalWithShipping.toLocaleString("id-ID")}
-            Invoice: ${result.invoice}
-        `;
-
-            const waUrl = `https://wa.me/${adminPhone}?text=${encodeURIComponent(
-                message,
-            )}`;
-
             // ✅ CLEAR CART AFTER CONFIRM
             setCart([]);
             localStorage.removeItem("cart");
             localStorage.removeItem("checkoutData");
+            setSelectedFile(null);
+            setPreviewUrl(null);
             setCheckoutData({
                 name: "",
                 phone: "",
@@ -325,10 +344,36 @@ export default function CartPage({ auth }) {
                 payment: "COD",
             });
 
-            // ✅ REFRESH TRANSACTIONS (reload page to get latest from server)
-            window.location.reload();
+            // ✅ REDIRECT BASED ON PAYMENT METHOD
+            if (checkoutData.payment === 'COD') {
+                // For COD, redirect to WhatsApp admin (for issues only)
+                const adminPhone = "628115133959";
+                const productList = cart
+                    .map((p) => `- ${p.title} x${p.qty}`)
+                    .join("%0A");
 
-            window.location.href = waUrl;
+                const message = `
+Halo Admin, saya sudah order COD:
+
+Nama: ${checkoutData.name}
+No HP: ${checkoutData.phone}
+Alamat: ${checkoutData.address}, ${city}, ${province}
+
+Pesanan:
+${productList}
+
+Total: Rp ${grandTotalWithShipping.toLocaleString("id-ID")}
+Invoice: ${result.invoice}
+
+Mohon segera diproses!
+                `.trim();
+
+                const waUrl = `https://wa.me/${adminPhone}?text=${encodeURIComponent(message)}`;
+                window.location.href = waUrl;
+            } else {
+                // For Transfer/QRIS/E-Wallet, redirect to upload proof page
+                window.location.href = route('transactions.upload-proof', result.invoice);
+            }
         } catch (error) {
             console.error("Fetch Error:", error);
             alert("Error: " + error.message);
@@ -336,191 +381,9 @@ export default function CartPage({ auth }) {
     };
 
     const handleStartCheckout = () => {
-        if (checkoutData.payment === "Transfer") {
-            setShowTransferModal(true);
-            return;
-        }
-        
-        if (checkoutData.payment === "QRIS") {
-            setShowQRISModal(true);
-            return;
-        }
-
+        // Langsung proses checkout, tidak perlu modal lagi
+        // Upload bukti sudah ada di form checkout
         handleConfirmCheckout();
-    };
-
-    const handleConfirmTransfer = async () => {
-        // When user confirms transfer, save transaction and redirect to upload proof page
-        try {
-            // Validate required fields
-            if (!checkoutData.name || !checkoutData.phone || !checkoutData.address) {
-                alert("Mohon lengkapi semua data pengiriman (Nama, No WhatsApp, Alamat).");
-                return;
-            }
-
-            // Validate city and province
-            if (useProfileAddress && (!auth.user?.city || !auth.user?.province)) {
-                alert("Alamat profil Anda belum lengkap. Mohon isi Kota dan Provinsi di halaman Profil sebelum melakukan pembayaran.");
-                return;
-            }
-
-            if (!useProfileAddress && (!checkoutData.city || !checkoutData.province)) {
-                alert("Mohon pilih lokasi pengiriman (Kota & Provinsi).");
-                return;
-            }
-
-            const response = await fetch("/cart/save-transaction", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRF-TOKEN": csrf_token,
-                },
-                body: JSON.stringify({
-                    items: cart,
-                    customer_name: checkoutData.name,
-                    customer_phone: checkoutData.phone,
-                    customer_address: checkoutData.address,
-                    customer_city: useProfileAddress ? auth.user.city : checkoutData.city,
-                    customer_province: useProfileAddress ? auth.user.province : checkoutData.province,
-                    shipping_option: checkoutData.shippingOption,
-                    payment_method: checkoutData.payment,
-                    grand_total: cart.reduce(
-                        (sum, item) => sum + item.sell_price * item.qty,
-                        0,
-                    ),
-                }),
-            });
-
-            // Check if response is ok
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error("Server Error:", response.status, errorText);
-                
-                // Try to parse as JSON first
-                try {
-                    const errorJson = JSON.parse(errorText);
-                    alert("Gagal menyimpan transaksi: " + (errorJson.message || errorText));
-                } catch (e) {
-                    // If not JSON, show raw error
-                    alert("Gagal menyimpan transaksi. Periksa console untuk detail error.");
-                }
-                return;
-            }
-
-            const result = await response.json();
-            if (!result.success) {
-                alert("Gagal menyimpan transaksi: " + result.message);
-                return;
-            }
-
-            // clear
-            setCart([]);
-            localStorage.removeItem("cart");
-            localStorage.removeItem("checkoutData");
-            setCheckoutData({
-                name: "",
-                phone: "",
-                address: "",
-                city: "",
-                province: "",
-                shippingOption: "",
-                payment: "COD",
-            });
-            setShowTransferModal(false);
-
-            // Redirect to upload proof page
-            window.location.href = route('transactions.upload-proof', result.invoice);
-        } catch (error) {
-            console.error("Fetch Error:", error);
-            alert("Error: " + error.message);
-        }
-    };
-    
-    const handleConfirmQRIS = async () => {
-        // Save transaction for QRIS payment and redirect to upload proof page
-        try {
-            // Validate required fields
-            if (!checkoutData.name || !checkoutData.phone || !checkoutData.address) {
-                alert("Mohon lengkapi semua data pengiriman (Nama, No WhatsApp, Alamat).");
-                return;
-            }
-
-            // Validate city and province
-            if (useProfileAddress && (!auth.user?.city || !auth.user?.province)) {
-                alert("Alamat profil Anda belum lengkap. Mohon isi Kota dan Provinsi di halaman Profil sebelum melakukan pembayaran.");
-                return;
-            }
-
-            if (!useProfileAddress && (!checkoutData.city || !checkoutData.province)) {
-                alert("Mohon pilih lokasi pengiriman (Kota & Provinsi).");
-                return;
-            }
-
-            const response = await fetch("/cart/save-transaction", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRF-TOKEN": csrf_token,
-                },
-                body: JSON.stringify({
-                    items: cart,
-                    customer_name: checkoutData.name,
-                    customer_phone: checkoutData.phone,
-                    customer_address: checkoutData.address,
-                    customer_city: useProfileAddress ? auth.user.city : checkoutData.city,
-                    customer_province: useProfileAddress ? auth.user.province : checkoutData.province,
-                    shipping_option: checkoutData.shippingOption,
-                    payment_method: checkoutData.payment,
-                    grand_total: cart.reduce(
-                        (sum, item) => sum + item.sell_price * item.qty,
-                        0,
-                    ),
-                }),
-            });
-
-            // Check if response is ok
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error("Server Error:", response.status, errorText);
-                
-                // Try to parse as JSON first
-                try {
-                    const errorJson = JSON.parse(errorText);
-                    alert("Gagal menyimpan transaksi: " + (errorJson.message || errorText));
-                } catch (e) {
-                    // If not JSON, show raw error
-                    alert("Gagal menyimpan transaksi. Periksa console untuk detail error.");
-                }
-                return;
-            }
-
-            const result = await response.json();
-            if (!result.success) {
-                alert("Gagal menyimpan transaksi: " + result.message);
-                return;
-            }
-
-            // clear
-            setCart([]);
-            localStorage.removeItem("cart");
-            localStorage.removeItem("checkoutData");
-            setCheckoutData({
-                name: "",
-                phone: "",
-                address: "",
-                city: "",
-                province: "",
-                shippingOption: "",
-                payment: "COD",
-            });
-            setShowQRISModal(false);
-
-            // Redirect to upload proof page
-            window.location.href = route('transactions.upload-proof', result.invoice);
-        } catch (error) {
-            console.error("Fetch Error:", error);
-            alert("Error: " + error.message);
-        }
     };
 
     /* ===============================
@@ -967,6 +830,140 @@ export default function CartPage({ auth }) {
                                                     })
                                                 }
                                             />
+                                        </div>
+                                    )}
+
+                                    {/* Upload Bukti Pembayaran - Hanya muncul untuk Transfer/QRIS/E-Wallet */}
+                                    {checkoutData.payment !== 'COD' && (
+                                        <div id="payment-proof-upload" className="mb-4">
+                                            <label className="block text-white/70 mb-2">
+                                                Bukti Pembayaran <span className="text-red-400">*</span>
+                                            </label>
+                                            
+                                            {/* Payment Info */}
+                                            <div className="bg-blue-500/20 border border-blue-400 rounded-lg p-4 mb-4">
+                                                <h4 className="text-white font-semibold mb-3">Informasi Pembayaran</h4>
+                                                
+                                                {checkoutData.payment === 'Transfer' && (
+                                                    <div className="space-y-2 text-white">
+                                                        <p className="text-white/70">Silakan transfer ke rekening berikut:</p>
+                                                        <div className="bg-black/40 p-4 rounded-lg">
+                                                            <p className="text-white font-semibold text-lg">{bankDetails.bank}</p>
+                                                            <p className="text-white">No. Rek: <span className="font-mono text-xl">{bankDetails.account}</span></p>
+                                                            <p className="text-white">Atas Nama: {bankDetails.holder}</p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                
+                                                {checkoutData.payment === 'QRIS' && (
+                                                    <div className="space-y-2 text-white">
+                                                        <p className="text-white/70">Scan QRIS di bawah ini untuk pembayaran:</p>
+                                                        <div className="flex justify-center">
+                                                            <div className="bg-white p-4 rounded-lg">
+                                                                <img
+                                                                    src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQzG4iI7zGqTlLN07XToN_hS_IOr6lvuJok2A&s"
+                                                                    alt="QRIS Code"
+                                                                    className="w-48 h-48 object-contain"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                        <p className="text-center text-sm">Scan dengan aplikasi e-wallet Anda</p>
+                                                    </div>
+                                                )}
+                                                
+                                                {checkoutData.payment === 'E-Wallet' && (
+                                                    <div className="space-y-2 text-white">
+                                                        <p className="text-white/70">Pembayaran E-Wallet:</p>
+                                                        <div className="bg-black/40 p-4 rounded-lg text-center">
+                                                            <p className="text-white">DANA / OVO / GOPAY / LINKAJA</p>
+                                                            <p className="text-white font-mono text-xl">0811-5133-959</p>
+                                                            <p className="text-white text-sm">a.n Sniffy Store</p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            
+                                            {/* Upload Area */}
+                                            <div
+                                                className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                                                    dragActive
+                                                        ? 'border-blue-500 bg-blue-500/20'
+                                                        : 'border-white/30 hover:border-white/50'
+                                                }`}
+                                                onDragEnter={handleDrag}
+                                                onDragLeave={handleDrag}
+                                                onDragOver={handleDrag}
+                                                onDrop={handleDrop}
+                                            >
+                                                <input
+                                                    ref={fileInputRef}
+                                                    type="file"
+                                                    className="hidden"
+                                                    accept="image/*"
+                                                    onChange={(e) => handleFileChange(e.target.files[0])}
+                                                />
+
+                                                {previewUrl ? (
+                                                    <div className="space-y-4">
+                                                        <div className="relative inline-block">
+                                                            <img
+                                                                src={previewUrl}
+                                                                alt="Preview"
+                                                                className="max-h-64 rounded-lg shadow-md mx-auto"
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setSelectedFile(null);
+                                                                    setPreviewUrl(null);
+                                                                    if (fileInputRef.current) fileInputRef.current.value = '';
+                                                                }}
+                                                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                                                            >
+                                                                <IconX size={16} />
+                                                            </button>
+                                                        </div>
+                                                        <p className="text-sm text-white/70">
+                                                            {selectedFile?.name}
+                                                        </p>
+                                                        <p className="text-xs text-green-400">✓ File siap untuk diupload</p>
+                                                    </div>
+                                                ) : (
+                                                    <div
+                                                        className="cursor-pointer"
+                                                        onClick={() => fileInputRef.current?.click()}
+                                                    >
+                                                        <div className="flex flex-col items-center gap-3">
+                                                            <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center">
+                                                                <IconUpload size={24} className="text-white" />
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-white font-medium">
+                                                                    Klik untuk upload atau drag & drop
+                                                                </p>
+                                                                <p className="text-sm text-white/50 mt-1">
+                                                                    Format: JPG, PNG, GIF (Max 5MB)
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            
+                                            {/* Upload Instructions */}
+                                            <div className="mt-3 bg-yellow-500/20 border border-yellow-400 rounded-lg p-3">
+                                                <div className="flex items-start gap-2">
+                                                    <IconPhoto size={18} className="text-yellow-400 mt-0.5 flex-shrink-0" />
+                                                    <div className="text-xs text-yellow-200">
+                                                        <p className="font-semibold mb-1">Instruksi:</p>
+                                                        <ul className="list-disc list-inside space-y-1 text-yellow-100/80">
+                                                            <li>Screenshot/foto bukti pembayaran dengan jelas</li>
+                                                            <li>Pastikan semua informasi terbaca</li>
+                                                            <li>Ukuran file maksimal 5MB</li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     )}
 
