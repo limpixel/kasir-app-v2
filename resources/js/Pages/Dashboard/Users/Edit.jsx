@@ -119,7 +119,7 @@ export default function Edit() {
                                 label={role.name}
                                 value={role.name}
                                 onChange={setSelectedRoles}
-                                defaultChecked={data.selectedRoles.some((name) => name === role.name ?? true)}
+                                defaultChecked={data.selectedRoles.some((name) => name === role.name) ?? true}
                             />
                         ))}
                     </div>

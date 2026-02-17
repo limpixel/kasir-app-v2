@@ -61,6 +61,7 @@ export default function Edit({ auth, mustVerifyEmail, status }) {
                                             <p><span className="font-medium">Nama:</span> {auth.user.name}</p>
                                             <p><span className="font-medium">Email:</span> {auth.user.email}</p>
                                             {auth.user.phone && <p><span className="font-medium">Telepon:</span> {auth.user.phone}</p>}
+                                            {auth.user.address && <p><span className="font-medium">Alamat:</span> {auth.user.address}</p>}
                                         </div>
                                     </div>
                                     <UpdateProfileInformationForm

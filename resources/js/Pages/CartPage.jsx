@@ -58,6 +58,9 @@ export default function CartPage({ auth }) {
     const [showTransferModal, setShowTransferModal] = useState(false);
     // QRIS modal
     const [showQRISModal, setShowQRISModal] = useState(false);
+    
+    // State untuk mengelola penggunaan alamat dari profil
+    const [useProfileAddress, setUseProfileAddress] = useState(false);
     const bankDetails = {
         bank: "BCA",
         account: "1234567890",
@@ -110,14 +113,25 @@ export default function CartPage({ auth }) {
         }));
     }, [activeProductId]);
 
-    // Prefill name and phone from authenticated user if available
+    // Reset useProfileAddress when auth changes and prefill name and phone from authenticated user if available
     useEffect(() => {
+        setUseProfileAddress(false); // Reset when auth changes
+
         if (auth?.user) {
             setCheckoutData((prev) => ({
                 ...prev,
                 name: prev.name || auth.user.name,
                 phone: prev.phone || auth.user.phone || "",
+                city: prev.city || auth.user.city || '',
+                province: prev.province || auth.user.province || '',
+                // Jika user punya address di profil, gunakan sebagai default
+                address: prev.address || auth.user.address || prev.address,
             }));
+            
+            // Auto select profile address jika user memiliki address
+            if (auth.user.address) {
+                setUseProfileAddress(true);
+            }
         }
     }, [auth]);
 
@@ -139,6 +153,20 @@ export default function CartPage({ auth }) {
             return;
         }
 
+        // Determine which city/province to use based on useProfileAddress
+        const city = useProfileAddress ? auth.user?.city : checkoutData.city;
+        const province = useProfileAddress ? auth.user?.province : checkoutData.province;
+
+        // Validate city and province are filled
+        if (!city || !province) {
+            if (useProfileAddress) {
+                alert("Alamat profil Anda belum lengkap. Mohon isi Kota dan Provinsi di halaman Profil sebelum melakukan pembayaran.");
+            } else {
+                alert("Mohon pilih lokasi pengiriman (Kota & Provinsi).");
+            }
+            return;
+        }
+
         // Validate Jabodetabek location
         const jabodetabekCities = [
             "jakarta",
@@ -148,9 +176,9 @@ export default function CartPage({ auth }) {
             "bekasi",
         ];
         const isValidLocation = jabodetabekCities.some(
-            (city) =>
-                checkoutData.city.toLowerCase().includes(city) ||
-                checkoutData.province.toLowerCase().includes(city),
+            (cityName) =>
+                city.toLowerCase().includes(cityName) ||
+                province.toLowerCase().includes(cityName),
         );
 
         if (!isValidLocation) {
@@ -166,15 +194,15 @@ export default function CartPage({ auth }) {
             let baseShippingCost = 0;
 
             // Base shipping cost based on location
-            if (checkoutData.city.toLowerCase().includes("jakarta")) {
+            if (city.toLowerCase().includes("jakarta")) {
                 baseShippingCost = 15000; // Within Jakarta
             } else if (
-                checkoutData.city.toLowerCase().includes("bekasi") ||
-                checkoutData.city.toLowerCase().includes("depok") ||
-                checkoutData.city.toLowerCase().includes("tangerang")
+                city.toLowerCase().includes("bekasi") ||
+                city.toLowerCase().includes("depok") ||
+                city.toLowerCase().includes("tangerang")
             ) {
                 baseShippingCost = 20000; // Nearby areas
-            } else if (checkoutData.city.toLowerCase().includes("bogor")) {
+            } else if (city.toLowerCase().includes("bogor")) {
                 baseShippingCost = 25000; // Further away
             } else {
                 baseShippingCost = 30000; // Default for Jabodetabek
@@ -214,8 +242,8 @@ export default function CartPage({ auth }) {
                     customer_name: checkoutData.name,
                     customer_phone: checkoutData.phone,
                     customer_address: checkoutData.address,
-                    customer_city: checkoutData.city,
-                    customer_province: checkoutData.province,
+                    customer_city: city,
+                    customer_province: province,
                     shipping_cost: shippingCost,
                     shipping_option: checkoutData.shippingOption,
                     payment_method: checkoutData.payment,
@@ -322,8 +350,25 @@ export default function CartPage({ auth }) {
     };
 
     const handleConfirmTransfer = async () => {
-        // When user confirms transfer, save transaction and redirect to WA
+        // When user confirms transfer, save transaction and redirect to upload proof page
         try {
+            // Validate required fields
+            if (!checkoutData.name || !checkoutData.phone || !checkoutData.address) {
+                alert("Mohon lengkapi semua data pengiriman (Nama, No WhatsApp, Alamat).");
+                return;
+            }
+
+            // Validate city and province
+            if (useProfileAddress && (!auth.user?.city || !auth.user?.province)) {
+                alert("Alamat profil Anda belum lengkap. Mohon isi Kota dan Provinsi di halaman Profil sebelum melakukan pembayaran.");
+                return;
+            }
+
+            if (!useProfileAddress && (!checkoutData.city || !checkoutData.province)) {
+                alert("Mohon pilih lokasi pengiriman (Kota & Provinsi).");
+                return;
+            }
+
             const response = await fetch("/cart/save-transaction", {
                 method: "POST",
                 headers: {
@@ -335,8 +380,8 @@ export default function CartPage({ auth }) {
                     customer_name: checkoutData.name,
                     customer_phone: checkoutData.phone,
                     customer_address: checkoutData.address,
-                    customer_city: checkoutData.city,
-                    customer_province: checkoutData.province,
+                    customer_city: useProfileAddress ? auth.user.city : checkoutData.city,
+                    customer_province: useProfileAddress ? auth.user.province : checkoutData.province,
                     shipping_option: checkoutData.shippingOption,
                     payment_method: checkoutData.payment,
                     grand_total: cart.reduce(
@@ -350,10 +395,15 @@ export default function CartPage({ auth }) {
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error("Server Error:", response.status, errorText);
-                alert(
-                    "Gagal menyimpan transaksi: Server error " +
-                        response.status,
-                );
+                
+                // Try to parse as JSON first
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    alert("Gagal menyimpan transaksi: " + (errorJson.message || errorText));
+                } catch (e) {
+                    // If not JSON, show raw error
+                    alert("Gagal menyimpan transaksi. Periksa console untuk detail error.");
+                }
                 return;
             }
 
@@ -362,23 +412,6 @@ export default function CartPage({ auth }) {
                 alert("Gagal menyimpan transaksi: " + result.message);
                 return;
             }
-
-            const adminPhone = "628115133959";
-            const userPhone = checkoutData.phone.startsWith("08")
-                ? "62" + checkoutData.phone.slice(1)
-                : checkoutData.phone.startsWith("+62")
-                  ? checkoutData.phone.replace("+", "")
-                  : checkoutData.phone;
-
-            const productList = cart
-                .map((p) => `- ${p.title} x${p.qty}`)
-                .join("%0A");
-
-            const message = `\nHalo Admin, saya ingin konfirmasi pembayaran transfer:\n\nNama: ${checkoutData.name}\nNo HP: ${userPhone}\nAlamat: ${checkoutData.address}\nPembayaran: ${checkoutData.payment}\nBank: ${bankDetails.bank}\nRek: ${bankDetails.account}\nAtas Nama: ${bankDetails.holder}\n\nPesanan:\n${productList}\n\nInvoice: ${result.invoice}\n`;
-
-            const waUrl = `https://wa.me/${adminPhone}?text=${encodeURIComponent(
-                message,
-            )}`;
 
             // clear
             setCart([]);
@@ -394,9 +427,9 @@ export default function CartPage({ auth }) {
                 payment: "COD",
             });
             setShowTransferModal(false);
-            window.location.reload();
 
-            window.location.href = waUrl;
+            // Redirect to upload proof page
+            window.location.href = route('transactions.upload-proof', result.invoice);
         } catch (error) {
             console.error("Fetch Error:", error);
             alert("Error: " + error.message);
@@ -404,8 +437,25 @@ export default function CartPage({ auth }) {
     };
     
     const handleConfirmQRIS = async () => {
-        // Save transaction for QRIS payment
+        // Save transaction for QRIS payment and redirect to upload proof page
         try {
+            // Validate required fields
+            if (!checkoutData.name || !checkoutData.phone || !checkoutData.address) {
+                alert("Mohon lengkapi semua data pengiriman (Nama, No WhatsApp, Alamat).");
+                return;
+            }
+
+            // Validate city and province
+            if (useProfileAddress && (!auth.user?.city || !auth.user?.province)) {
+                alert("Alamat profil Anda belum lengkap. Mohon isi Kota dan Provinsi di halaman Profil sebelum melakukan pembayaran.");
+                return;
+            }
+
+            if (!useProfileAddress && (!checkoutData.city || !checkoutData.province)) {
+                alert("Mohon pilih lokasi pengiriman (Kota & Provinsi).");
+                return;
+            }
+
             const response = await fetch("/cart/save-transaction", {
                 method: "POST",
                 headers: {
@@ -417,8 +467,8 @@ export default function CartPage({ auth }) {
                     customer_name: checkoutData.name,
                     customer_phone: checkoutData.phone,
                     customer_address: checkoutData.address,
-                    customer_city: checkoutData.city,
-                    customer_province: checkoutData.province,
+                    customer_city: useProfileAddress ? auth.user.city : checkoutData.city,
+                    customer_province: useProfileAddress ? auth.user.province : checkoutData.province,
                     shipping_option: checkoutData.shippingOption,
                     payment_method: checkoutData.payment,
                     grand_total: cart.reduce(
@@ -432,10 +482,15 @@ export default function CartPage({ auth }) {
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error("Server Error:", response.status, errorText);
-                alert(
-                    "Gagal menyimpan transaksi: Server error " +
-                        response.status,
-                );
+                
+                // Try to parse as JSON first
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    alert("Gagal menyimpan transaksi: " + (errorJson.message || errorText));
+                } catch (e) {
+                    // If not JSON, show raw error
+                    alert("Gagal menyimpan transaksi. Periksa console untuk detail error.");
+                }
                 return;
             }
 
@@ -444,23 +499,6 @@ export default function CartPage({ auth }) {
                 alert("Gagal menyimpan transaksi: " + result.message);
                 return;
             }
-
-            const adminPhone = "628115133959";
-            const userPhone = checkoutData.phone.startsWith("08")
-                ? "62" + checkoutData.phone.slice(1)
-                : checkoutData.phone.startsWith("+62")
-                  ? checkoutData.phone.replace("+", "")
-                  : checkoutData.phone;
-
-            const productList = cart
-                .map((p) => `- ${p.title} x${p.qty}`)
-                .join("%0A");
-
-            const message = `\nHalo Admin, saya ingin konfirmasi pembayaran QRIS:\n\nNama: ${checkoutData.name}\nNo HP: ${userPhone}\nAlamat: ${checkoutData.address}\nPembayaran: ${checkoutData.payment}\n\nPesanan:\n${productList}\n\nInvoice: ${result.invoice}\n`;
-
-            const waUrl = `https://wa.me/${adminPhone}?text=${encodeURIComponent(
-                message,
-            )}`;
 
             // clear
             setCart([]);
@@ -476,9 +514,9 @@ export default function CartPage({ auth }) {
                 payment: "COD",
             });
             setShowQRISModal(false);
-            window.location.reload();
 
-            window.location.href = waUrl;
+            // Redirect to upload proof page
+            window.location.href = route('transactions.upload-proof', result.invoice);
         } catch (error) {
             console.error("Fetch Error:", error);
             alert("Error: " + error.message);
@@ -776,60 +814,161 @@ export default function CartPage({ auth }) {
                                         )}
                                     </div>
 
-                                    <div>
+                                    {/* Lokasi Pengiriman hanya muncul jika menggunakan alamat baru */}
+                                    {!useProfileAddress && (
+                                        <div>
+                                            <label className="block text-white/70 mb-2">
+                                                Lokasi Pengiriman
+                                            </label>
+                                            <select
+                                                className="w-full p-3 bg-black border border-white/30 text-white rounded-lg focus:border-white transition-colors"
+                                                value={`${checkoutData.city},${checkoutData.province}`}
+                                                onChange={(e) => {
+                                                    const [city, province] =
+                                                        e.target.value.split(",");
+                                                    setCheckoutData({
+                                                        ...checkoutData,
+                                                        city: city,
+                                                        province: province,
+                                                    });
+                                                }}
+                                            >
+                                                <option value="">
+                                                    Pilih Lokasi Pengiriman
+                                                </option>
+                                                <option value="jakarta,Jakarta">
+                                                    Jakarta
+                                                </option>
+                                                <option value="bogor,Jawa Barat">
+                                                    Bogor
+                                                </option>
+                                                <option value="depok,Jawa Barat">
+                                                    Depok
+                                                </option>
+                                                <option value="tangerang,Banten">
+                                                    Tangerang
+                                                </option>
+                                                <option value="bekasi,Jawa Barat">
+                                                    Bekasi
+                                                </option>
+                                            </select>
+                                        </div>
+                                    )}
+
+                                    {/* Pilihan alamat */}
+                                    <div className="mb-4">
                                         <label className="block text-white/70 mb-2">
-                                            Lokasi Pengiriman
+                                            Pilihan Alamat
                                         </label>
-                                        <select
-                                            className="w-full p-3 bg-black border border-white/30 text-white rounded-lg focus:border-white transition-colors"
-                                            value={`${checkoutData.city},${checkoutData.province}`}
-                                            onChange={(e) => {
-                                                const [city, province] =
-                                                    e.target.value.split(",");
-                                                setCheckoutData({
-                                                    ...checkoutData,
-                                                    city: city,
-                                                    province: province,
-                                                });
-                                            }}
-                                        >
-                                            <option value="">
-                                                Pilih Lokasi Pengiriman
-                                            </option>
-                                            <option value="jakarta,Jakarta">
-                                                Jakarta
-                                            </option>
-                                            <option value="bogor,Jawa Barat">
-                                                Bogor
-                                            </option>
-                                            <option value="depok,Jawa Barat">
-                                                Depok
-                                            </option>
-                                            <option value="tangerang,Banten">
-                                                Tangerang
-                                            </option>
-                                            <option value="bekasi,Jawa Barat">
-                                                Bekasi
-                                            </option>
-                                        </select>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            {/* Pilihan menggunakan alamat dari profil */}
+                                            {auth.user?.address && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setUseProfileAddress(true);
+                                                        setCheckoutData({
+                                                            ...checkoutData,
+                                                            address: auth.user.address,
+                                                            city: auth.user.city || '',
+                                                            province: auth.user.province || '',
+                                                        });
+                                                    }}
+                                                    className={`p-4 text-left rounded-lg border transition-all relative ${
+                                                        useProfileAddress
+                                                            ? 'bg-blue-500/20 border-blue-400 text-white'
+                                                            : 'bg-black/30 border-white/30 text-white/70 hover:border-white/50'
+                                                    }`}
+                                                >
+                                                    {/* Warning badge jika city/province kosong */}
+                                                    {(!auth.user?.city || !auth.user?.province) && (
+                                                        <span className="absolute top-2 right-2 bg-yellow-500 text-black text-xs px-2 py-1 rounded-full font-semibold">
+                                                            ⚠️ Belum Lengkap
+                                                        </span>
+                                                    )}
+                                                    <div className="flex items-start">
+                                                        <div className={`mr-3 mt-1 flex-shrink-0 w-5 h-5 rounded-full border flex items-center justify-center ${
+                                                            useProfileAddress
+                                                                ? 'border-blue-400 bg-blue-500'
+                                                                : 'border-white/50'
+                                                        }`}>
+                                                            {useProfileAddress && (
+                                                                <div className="w-2 h-2 rounded-full bg-white"></div>
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <div className="font-semibold">Alamat dari Profil</div>
+                                                            <div className="text-sm mt-1">{auth.user.address}</div>
+                                                            {(auth.user?.city || auth.user?.province) ? (
+                                                                <div className="text-sm text-white/50 mt-1">
+                                                                    {auth.user.city}{auth.user.city && auth.user.province && ', '}{auth.user.province}
+                                                                </div>
+                                                            ) : (
+                                                                <div className="text-sm text-yellow-400 mt-1">
+                                                                    ⚠️ Kota dan Provinsi belum diisi
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </button>
+                                            )}
+                                            
+                                            {/* Pilihan menggunakan alamat baru */}
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setUseProfileAddress(false);
+                                                    setCheckoutData({
+                                                        ...checkoutData,
+                                                        address: '',
+                                                        city: '',
+                                                        province: '',
+                                                    });
+                                                }}
+                                                className={`p-4 text-left rounded-lg border transition-all ${
+                                                    !useProfileAddress
+                                                        ? 'bg-blue-500/20 border-blue-400 text-white'
+                                                        : 'bg-black/30 border-white/30 text-white/70 hover:border-white/50'
+                                                }`}
+                                            >
+                                                <div className="flex items-start">
+                                                    <div className={`mr-3 mt-1 flex-shrink-0 w-5 h-5 rounded-full border flex items-center justify-center ${
+                                                        !useProfileAddress
+                                                            ? 'border-blue-400 bg-blue-500'
+                                                            : 'border-white/50'
+                                                    }`}>
+                                                        {!useProfileAddress && (
+                                                            <div className="w-2 h-2 rounded-full bg-white"></div>
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-semibold">Alamat Baru</div>
+                                                        <div className="text-sm mt-1">Masukkan alamat pengiriman baru</div>
+                                                    </div>
+                                                </div>
+                                            </button>
+                                        </div>
                                     </div>
 
-                                    <div>
-                                        <label className="block text-white/70 mb-2">
-                                            Alamat
-                                        </label>
-                                        <textarea
-                                            placeholder="Masukkan alamat lengkap"
-                                            className="w-full p-3 bg-black border border-white/30 text-blue-50 rounded-lg focus:border-white transition-colors h-20"
-                                            value={checkoutData.address}
-                                            onChange={(e) =>
-                                                setCheckoutData({
-                                                    ...checkoutData,
-                                                    address: e.target.value,
-                                                })
-                                            }
-                                        />
-                                    </div>
+                                    {/* Form alamat baru hanya muncul jika dipilih */}
+                                    {!useProfileAddress && (
+                                        <div className="mb-4">
+                                            <label className="block text-white/70 mb-2">
+                                                Masukkan Alamat Baru
+                                            </label>
+                                            <textarea
+                                                placeholder="Contoh: Jl. Raya Bogor No. 123, RT 001/RW 002, Kelurahan Sukamaju, Kecamatan Ciomas, Kota Bogor"
+                                                className="w-full p-3 bg-black border border-white/30 text-white rounded-lg focus:border-white transition-colors h-20"
+                                                value={checkoutData.address}
+                                                onChange={(e) =>
+                                                    setCheckoutData({
+                                                        ...checkoutData,
+                                                        address: e.target.value,
+                                                    })
+                                                }
+                                            />
+                                        </div>
+                                    )}
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>

@@ -22,6 +22,9 @@ class User extends Authenticatable
         'email',
         'password',
         'phone', // Menambahkan kolom phone ke dalam fillable
+        'address', // Menambahkan kolom address ke dalam fillable
+        'city', // Menambahkan kolom city ke dalam fillable
+        'province', // Menambahkan kolom province ke dalam fillable
     ];
 
     /**

@@ -6,8 +6,8 @@ import Menu from '@/Utils/Menu';
 import Notification from '@/Components/Dashboard/Notification';
 
 export default function Navbar({ toggleSidebar, themeSwitcher, darkMode }) {
-    // destruct auth from props
-    const { auth } = usePage().props;
+    // destruct auth and notifications from props
+    const { auth, notifications, recentTransactions } = usePage().props;
 
     // get menu from utils
     const menuNavigation = Menu();
@@ -46,12 +46,6 @@ export default function Navbar({ toggleSidebar, themeSwitcher, darkMode }) {
                     <IconAlignLeft size={18} strokeWidth={1.5} />
                 </button>
                 <div className='flex flex-row items-center gap-1 md:border-l-2 md:border-double md:px-4 dark:border-gray-900'>
-                    {/* {links.map((link, i) => (
-                        link.hasOwnProperty('subdetails') ?
-                            sublinks.map((sublink, x) => sublink.active === true && <span className='font-semibold text-sm md:text-base text-gray-700 dark:text-gray-400' key={x}>{sublink.title}</span>)
-                            :
-                            link.active === true && <span className='font-semibold text-sm md:text-base text-gray-700 dark:text-gray-400' key={i}>{link.title}</span>
-                    ))} */}
                     {links.map((link, i) => (
                         link.hasOwnProperty('subdetails') ?
                             sublinks.map((sublink, x) => sublink.active === true && <span className='font-semibold text-sm md:text-base text-gray-700 dark:text-gray-400' key={x}>{sublink.title}</span>)
@@ -66,7 +60,10 @@ export default function Navbar({ toggleSidebar, themeSwitcher, darkMode }) {
                         <button className='p-2 rounded-md text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-900 ' onClick={themeSwitcher}>
                             {darkMode ? <IconSun strokeWidth={1.5} size={18} /> : <IconMoon strokeWidth={1.5} size={18} />}
                         </button>
-                        <Notification />
+                        <Notification 
+                            newTransactionsCount={notifications?.new_transactions || 0}
+                            recentTransactions={recentTransactions || []}
+                        />
                     </div>
                 </div>
                 <AuthDropdown auth={auth} isMobile={isMobile} />

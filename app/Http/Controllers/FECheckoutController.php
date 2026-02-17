@@ -122,18 +122,32 @@ class FECheckoutController extends Controller
             'customer_name' => 'required|string',
             'customer_phone' => 'required|string',
             'customer_address' => 'required|string',
-            'customer_city' => 'required|string',
-            'customer_province' => 'required|string',
+            'customer_city' => 'nullable|string',
+            'customer_province' => 'nullable|string',
             'payment_method' => 'required|string',
             'grand_total' => 'required|numeric',
         ]);
 
-        // Validate customer location for Jabodetabek region
-        if (!$this->jabodetabekValidator->isJabodetabek($request->customer_city, $request->customer_province, $request->customer_address)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Maaf, kami hanya melayani pembelian untuk wilayah Jabodetabek (Jakarta, Bogor, Depok, Tangerang, Bekasi).',
-            ], 422);
+        // If city/province not provided, try to extract from address
+        $city = $request->customer_city;
+        $province = $request->customer_province;
+        
+        if (empty($city) || empty($province)) {
+            // Try to validate using address only
+            if (!$this->jabodetabekValidator->isJabodetabek('', '', $request->customer_address)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Maaf, kami hanya melayani pembelian untuk wilayah Jabodetabek (Jakarta, Bogor, Depok, Tangerang, Bekasi).',
+                ], 422);
+            }
+        } else {
+            // Validate customer location for Jabodetabek region
+            if (!$this->jabodetabekValidator->isJabodetabek($city, $province, $request->customer_address)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Maaf, kami hanya melayani pembelian untuk wilayah Jabodetabek (Jakarta, Bogor, Depok, Tangerang, Bekasi).',
+                ], 422);
+            }
         }
 
         try {
@@ -147,16 +161,16 @@ class FECheckoutController extends Controller
                 'customer_name' => $request->customer_name,
                 'customer_phone' => $request->customer_phone,
                 'customer_address' => $request->customer_address,
-                'customer_city' => $request->customer_city,
-                'customer_province' => $request->customer_province,
+                'city' => $request->customer_city,
+                'province' => $request->customer_province,
                 'payment_method' => $request->payment_method,
                 'grand_total' => $request->grand_total,
                 'cash' => $request->grand_total,
                 'change' => 0,
                 'discount' => 0,
-                    // default status for new transactions
-                    'status' => 'unpaid',
-                    'cashier_id' => auth()->id(),
+                // default status for new transactions
+                'status' => 'unpaid',
+                'cashier_id' => auth()->id(),
             ]);
 
             // Create transaction details

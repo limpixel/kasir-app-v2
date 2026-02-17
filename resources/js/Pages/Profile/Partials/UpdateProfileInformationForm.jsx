@@ -12,6 +12,9 @@ export default function UpdateProfileInformation({ mustVerifyEmail, status, clas
         name: user.name,
         email: user.email,
         phone: user.phone || '', // Menambahkan field phone ke form
+        address: user.address || '', // Menambahkan field address ke form
+        city: user.city || '', // Menambahkan field city ke form
+        province: user.province || '', // Menambahkan field province ke form
     });
 
     const submit = (e) => {
@@ -76,6 +79,53 @@ export default function UpdateProfileInformation({ mustVerifyEmail, status, clas
                     />
 
                     <InputError className="mt-2" message={errors.phone} />
+                </div>
+
+                <div>
+                    <InputLabel htmlFor="address" value="Alamat" />
+
+                    <TextInput
+                        id="address"
+                        type="text"
+                        className="mt-1 block w-full"
+                        value={data.address}
+                        onChange={(e) => setData('address', e.target.value)}
+                        autoComplete="address"
+                    />
+
+                    <InputError className="mt-2" message={errors.address} />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <InputLabel htmlFor="city" value="Kota" />
+
+                        <TextInput
+                            id="city"
+                            type="text"
+                            className="mt-1 block w-full"
+                            value={data.city}
+                            onChange={(e) => setData('city', e.target.value)}
+                            autoComplete="address-level2"
+                        />
+
+                        <InputError className="mt-2" message={errors.city} />
+                    </div>
+
+                    <div>
+                        <InputLabel htmlFor="province" value="Provinsi" />
+
+                        <TextInput
+                            id="province"
+                            type="text"
+                            className="mt-1 block w-full"
+                            value={data.province}
+                            onChange={(e) => setData('province', e.target.value)}
+                            autoComplete="address-level1"
+                        />
+
+                        <InputError className="mt-2" message={errors.province} />
+                    </div>
                 </div>
 
                 {mustVerifyEmail && user.email_verified_at === null && (

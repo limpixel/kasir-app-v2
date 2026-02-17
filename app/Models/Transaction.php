@@ -17,7 +17,10 @@ class Transaction extends Model
         'province', 'city', 'district', 'ward', 'shipping_cost',
         'payment_method', 'status', 'payment_status', 'payment_details',
         'invoice', 'cash', 'change',
-        'discount', 'grand_total'
+        'discount', 'grand_total',
+        'order_status', 'order_date', 'shipping_date', 'delivered_date', 'cancelled_date',
+        'notes', 'customer_notes',
+        'payment_proof', 'payment_proof_uploaded_at'
     ];
 
     public function details()

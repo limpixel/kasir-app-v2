@@ -145,8 +145,15 @@ export default function GalleryDetail() {
             {/* ================= PRODUCT DETAIL ================= */}
             <section className="s-content" style={{ paddingTop: "14rem" }}>
                 {/* BACK LINK */}
-                    <div className="column large-12 text-start">
-                <div className=" row" style={{ marginTop: "40px", marginLeft: "100px", marginBottom:"40px" }}>
+                <div className="column large-12 text-start">
+                    <div
+                        className=" row"
+                        style={{
+                            marginTop: "40px",
+                            marginLeft: "100px",
+                            marginBottom: "40px",
+                        }}
+                    >
                         <Link href="/gallery" style={{ color: "#aaa" }}>
                             ← Kembali ke Gallery
                         </Link>
@@ -189,13 +196,22 @@ export default function GalleryDetail() {
                                 )}
                             </h3>
 
-                            <button
-                                onClick={() => addToCart(product)}
-                                className="btn btn--primary"
-                                style={{ width: "100%" }}
-                            >
-                                + Tambah ke Keranjang
-                            </button>
+                            {auth.user && user.id === 3 ? (
+                                <button
+                                    onClick={() => addToCart(product)}
+                                    className="btn btn--primary"
+                                    style={{ width: "100%" }}
+                                >
+                                    + Tambah ke Keranjang
+                                </button>
+                            ) : (
+                                <Link href="/login"
+                                    className="btn btn--primary"
+                                    style={{ width: "100%" }}
+                                >
+                                    Siilahkan untuk login
+                                </Link>
+                            )}
                         </div>
                     </div>
 

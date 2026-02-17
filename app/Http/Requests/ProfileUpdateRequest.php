@@ -19,6 +19,9 @@ class ProfileUpdateRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique(User::class)->ignore($this->user()->id)],
             'phone' => ['nullable', 'string', 'max:20'], // Menambahkan validasi untuk nomor telepon
+            'address' => ['nullable', 'string', 'max:500'], // Menambahkan validasi untuk alamat
+            'city' => ['nullable', 'string', 'max:255'], // Menambahkan validasi untuk kota
+            'province' => ['nullable', 'string', 'max:255'], // Menambahkan validasi untuk provinsi
         ];
     }
 }

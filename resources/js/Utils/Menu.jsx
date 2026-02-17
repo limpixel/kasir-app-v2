@@ -51,9 +51,9 @@ export default function Menu() {
         title: 'Transaksi',
         details: [
             {
-                title: 'Transaksi',
+                title: 'Manajemen Transaksi',
                 href: route('transactions.index'),
-                active: url === '/dashboard/customers' ? true : false, // Update comparison here
+                active: url === '/dashboard/transactions' ? true : false,
                 icon: <IconShoppingCart size={20} strokeWidth={1.5} />,
                 permissions: hasAnyPermission(['transactions-access']),
             },

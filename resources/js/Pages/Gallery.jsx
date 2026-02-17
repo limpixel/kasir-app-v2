@@ -14,8 +14,8 @@ export default function Gallery({ auth, products, categories, csrf_token }) {
 
     // FILTER STATES
     const [selectedCategories, setSelectedCategories] = useState([]);
-    const [priceRange, setPriceRange] = useState({ min: '', max: '' });
-    const [sortBy, setSortBy] = useState('newest');
+    const [priceRange, setPriceRange] = useState({ min: "", max: "" });
+    const [sortBy, setSortBy] = useState("newest");
 
     // ✅ CART FROM LOCAL STORAGE
     const [cart, setCart] = useState(() => {
@@ -28,9 +28,9 @@ export default function Gallery({ auth, products, categories, csrf_token }) {
     =============================== */
 
     const toggleCategory = (categoryId) => {
-        setSelectedCategories(prev => {
+        setSelectedCategories((prev) => {
             if (prev.includes(categoryId)) {
-                return prev.filter(id => id !== categoryId);
+                return prev.filter((id) => id !== categoryId);
             } else {
                 return [...prev, categoryId];
             }
@@ -38,9 +38,9 @@ export default function Gallery({ auth, products, categories, csrf_token }) {
     };
 
     const handlePriceChange = (type, value) => {
-        setPriceRange(prev => ({
+        setPriceRange((prev) => ({
             ...prev,
-            [type]: value
+            [type]: value,
         }));
     };
 
@@ -74,35 +74,40 @@ export default function Gallery({ auth, products, categories, csrf_token }) {
         FILTER AND SORT LOGIC
     =============================== */
 
-    const filteredAndSortedProducts = products.filter(product => {
-        // Category filter
-        if (selectedCategories.length > 0 && !selectedCategories.includes(product.category_id)) {
-            return false;
-        }
+    const filteredAndSortedProducts = products
+        .filter((product) => {
+            // Category filter
+            if (
+                selectedCategories.length > 0 &&
+                !selectedCategories.includes(product.category_id)
+            ) {
+                return false;
+            }
 
-        // Price filter
-        const sellPrice = Number(product.sell_price);
-        const minPrice = priceRange.min ? Number(priceRange.min) : 0;
-        const maxPrice = priceRange.max ? Number(priceRange.max) : Infinity;
+            // Price filter
+            const sellPrice = Number(product.sell_price);
+            const minPrice = priceRange.min ? Number(priceRange.min) : 0;
+            const maxPrice = priceRange.max ? Number(priceRange.max) : Infinity;
 
-        if (sellPrice < minPrice || sellPrice > maxPrice) {
-            return false;
-        }
+            if (sellPrice < minPrice || sellPrice > maxPrice) {
+                return false;
+            }
 
-        return true;
-    }).sort((a, b) => {
-        switch (sortBy) {
-            case 'newest':
-                // Assuming products are already ordered by id, which typically represents newest
-                return b.id - a.id;
-            case 'lowest_price':
-                return Number(a.sell_price) - Number(b.sell_price);
-            case 'highest_price':
-                return Number(b.sell_price) - Number(a.sell_price);
-            default:
-                return b.id - a.id;
-        }
-    });
+            return true;
+        })
+        .sort((a, b) => {
+            switch (sortBy) {
+                case "newest":
+                    // Assuming products are already ordered by id, which typically represents newest
+                    return b.id - a.id;
+                case "lowest_price":
+                    return Number(a.sell_price) - Number(b.sell_price);
+                case "highest_price":
+                    return Number(b.sell_price) - Number(a.sell_price);
+                default:
+                    return b.id - a.id;
+            }
+        });
 
     /* ===============================
         LOCAL STORAGE SYNC
@@ -211,10 +216,10 @@ export default function Gallery({ auth, products, categories, csrf_token }) {
                             ) : (
                                 <></>
                             )}
-                            
-                            {auth.user ? (
+
+                            {auth.user && auth.user.id === 3 ? (
                                 <Link
-                                    href={route('profile.edit')}
+                                    href={route("profile.edit")}
                                     className="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white"
                                 >
                                     Profile
@@ -320,27 +325,52 @@ export default function Gallery({ auth, products, categories, csrf_token }) {
                                                     style={{
                                                         display: "flex",
                                                         alignItems: "center",
-                                                        color: selectedCategories.includes(cat.id) ? "#fff" : "#bbb",
+                                                        color: selectedCategories.includes(
+                                                            cat.id,
+                                                        )
+                                                            ? "#fff"
+                                                            : "#bbb",
                                                         cursor: "pointer",
                                                         padding: "8px",
                                                         borderRadius: "6px",
-                                                        backgroundColor: selectedCategories.includes(cat.id) ? "rgba(58, 111, 67, 0.2)" : "transparent",
-                                                        transition: "all 0.2s ease",
+                                                        backgroundColor:
+                                                            selectedCategories.includes(
+                                                                cat.id,
+                                                            )
+                                                                ? "rgba(58, 111, 67, 0.2)"
+                                                                : "transparent",
+                                                        transition:
+                                                            "all 0.2s ease",
                                                     }}
-                                                    onClick={() => toggleCategory(cat.id)}
+                                                    onClick={() =>
+                                                        toggleCategory(cat.id)
+                                                    }
                                                 >
                                                     <input
                                                         type="checkbox"
-                                                        checked={selectedCategories.includes(cat.id)}
+                                                        checked={selectedCategories.includes(
+                                                            cat.id,
+                                                        )}
                                                         onChange={() => {}}
                                                         style={{
-                                                            backgroundColor :"#0000",
-                                                            
+                                                            backgroundColor:
+                                                                "#0000",
+
                                                             marginRight: "10px",
-                                                            accentColor: "#3A6F43",
+                                                            accentColor:
+                                                                "#3A6F43",
                                                         }}
                                                     />
-                                                    <span style={{ fontWeight: selectedCategories.includes(cat.id) ? "600" : "normal" }}>
+                                                    <span
+                                                        style={{
+                                                            fontWeight:
+                                                                selectedCategories.includes(
+                                                                    cat.id,
+                                                                )
+                                                                    ? "600"
+                                                                    : "normal",
+                                                        }}
+                                                    >
                                                         {cat.name}
                                                     </span>
                                                 </label>
@@ -368,7 +398,12 @@ export default function Gallery({ auth, products, categories, csrf_token }) {
                                         type="number"
                                         placeholder="Rp. Harga Minimum"
                                         value={priceRange.min}
-                                        onChange={(e) => handlePriceChange('min', e.target.value)}
+                                        onChange={(e) =>
+                                            handlePriceChange(
+                                                "min",
+                                                e.target.value,
+                                            )
+                                        }
                                         style={{
                                             width: "100%",
                                             padding: "12px",
@@ -385,7 +420,12 @@ export default function Gallery({ auth, products, categories, csrf_token }) {
                                         type="number"
                                         placeholder="Rp. Harga Maksimum"
                                         value={priceRange.max}
-                                        onChange={(e) => handlePriceChange('max', e.target.value)}
+                                        onChange={(e) =>
+                                            handlePriceChange(
+                                                "max",
+                                                e.target.value,
+                                            )
+                                        }
                                         style={{
                                             width: "100%",
                                             padding: "12px",
@@ -416,7 +456,9 @@ export default function Gallery({ auth, products, categories, csrf_token }) {
                                             fontSize: "15px",
                                         }}
                                     >
-                                        Menampilkan {filteredAndSortedProducts.length} Produk
+                                        Menampilkan{" "}
+                                        {filteredAndSortedProducts.length}{" "}
+                                        Produk
                                     </p>
 
                                     <select
@@ -433,8 +475,12 @@ export default function Gallery({ auth, products, categories, csrf_token }) {
                                         }}
                                     >
                                         <option value="newest">Terbaru</option>
-                                        <option value="lowest_price">Harga Terendah</option>
-                                        <option value="highest_price">Harga Tertinggi</option>
+                                        <option value="lowest_price">
+                                            Harga Terendah
+                                        </option>
+                                        <option value="highest_price">
+                                            Harga Tertinggi
+                                        </option>
                                     </select>
                                 </div>
 
@@ -448,138 +494,165 @@ export default function Gallery({ auth, products, categories, csrf_token }) {
                                 >
                                     {filteredAndSortedProducts.map((item) => (
                                         <div
-    key={item.id}
-    style={{
-        background: "#111",
-        borderRadius: "22px",
-        padding: "20px",
-        border: "1px solid #1f1f1f",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        height: "100%",
-        transition: "all 0.3s ease",
-    }}
->
-    {/* IMAGE */}
-    <div style={{ position: "relative", marginBottom: "18px" }}>
-        <img
-            src={item.image}
-            alt={item.title}
-            style={{
-                width: "100%",
-                height: "240px",
-                objectFit: "cover",
-                borderRadius: "18px",
-                display: "block",
-            }}
-        />
+                                            key={item.id}
+                                            style={{
+                                                background: "#111",
+                                                borderRadius: "22px",
+                                                padding: "20px",
+                                                border: "1px solid #1f1f1f",
+                                                display: "flex",
+                                                flexDirection: "column",
+                                                justifyContent: "space-between",
+                                                height: "100%",
+                                                transition: "all 0.3s ease",
+                                            }}
+                                        >
+                                            {/* IMAGE */}
+                                            <div
+                                                style={{
+                                                    position: "relative",
+                                                    marginBottom: "18px",
+                                                }}
+                                            >
+                                                <img
+                                                    src={item.image}
+                                                    alt={item.title}
+                                                    style={{
+                                                        width: "100%",
+                                                        height: "240px",
+                                                        objectFit: "cover",
+                                                        borderRadius: "18px",
+                                                        display: "block",
+                                                    }}
+                                                />
 
-        {/* STOCK BADGE */}
-        <span
-            style={{
-                position: "absolute",
-                top: "14px",
-                right: "14px",
-                padding: "6px 12px",
-                background:
-                    item.stock > 10
-                        ? "rgba(58,111,67,0.95)"
-                        : item.stock > 0
-                        ? "rgba(243,156,18,0.95)"
-                        : "rgba(231,76,60,0.95)",
-                color: "#fff",
-                borderRadius: "20px",
-                fontSize: "12px",
-                fontWeight: "600",
-                backdropFilter: "blur(6px)",
-            }}
-        >
-            {item.stock > 0 ? `Stok ${item.stock}` : "Habis"}
-        </span>
-    </div>
+                                                {/* STOCK BADGE */}
+                                                <span
+                                                    style={{
+                                                        position: "absolute",
+                                                        top: "14px",
+                                                        right: "14px",
+                                                        padding: "6px 12px",
+                                                        background:
+                                                            item.stock > 10
+                                                                ? "rgba(58,111,67,0.95)"
+                                                                : item.stock > 0
+                                                                  ? "rgba(243,156,18,0.95)"
+                                                                  : "rgba(231,76,60,0.95)",
+                                                        color: "#fff",
+                                                        borderRadius: "20px",
+                                                        fontSize: "12px",
+                                                        fontWeight: "600",
+                                                        backdropFilter:
+                                                            "blur(6px)",
+                                                    }}
+                                                >
+                                                    {item.stock > 0
+                                                        ? `Stok ${item.stock}`
+                                                        : "Habis"}
+                                                </span>
+                                            </div>
 
-    {/* CONTENT */}
-    <div style={{ flex: 1 }}>
-        <h6
-            style={{
-                color: "#fff",
-                fontSize: "14px",
-                letterSpacing: "1px",
-                marginBottom: "10px",
-                textTransform: "uppercase",
-                minHeight: "40px",
-            }}
-        >
-            {item.title}
-        </h6>
+                                            {/* CONTENT */}
+                                            <div style={{ flex: 1 }}>
+                                                <h6
+                                                    style={{
+                                                        color: "#fff",
+                                                        fontSize: "14px",
+                                                        letterSpacing: "1px",
+                                                        marginBottom: "10px",
+                                                        textTransform:
+                                                            "uppercase",
+                                                        minHeight: "40px",
+                                                    }}
+                                                >
+                                                    {item.title}
+                                                </h6>
 
-        <p
-            style={{
-                color: "#8a8a8a",
-                fontSize: "13px",
-                lineHeight: "1.5",
-                minHeight: "44px",
-            }}
-        >
-            {item.description?.substring(0, 70)}...
-        </p>
+                                                <p
+                                                    style={{
+                                                        color: "#8a8a8a",
+                                                        fontSize: "13px",
+                                                        lineHeight: "1.5",
+                                                        minHeight: "44px",
+                                                    }}
+                                                >
+                                                    {item.description?.substring(
+                                                        0,
+                                                        70,
+                                                    )}
+                                                    ...
+                                                </p>
 
-        <h5
-            style={{
-                color: "#fff",
-                marginTop: "16px",
-                fontSize: "20px",
-                fontWeight: "600",
-            }}
-        >
-            Rp {Number(item.sell_price).toLocaleString("id-ID")}
-        </h5>
-    </div>
+                                                <h5
+                                                    style={{
+                                                        color: "#fff",
+                                                        marginTop: "16px",
+                                                        fontSize: "20px",
+                                                        fontWeight: "600",
+                                                    }}
+                                                >
+                                                    Rp{" "}
+                                                    {Number(
+                                                        item.sell_price,
+                                                    ).toLocaleString("id-ID")}
+                                                </h5>
+                                            </div>
 
-    {/* BUTTON AREA */}
-    <div
-        style={{
-            marginTop: "20px",
-            display: "flex",
-            gap: "10px",
-        }}
-    >
-        <button
-            onClick={() => addToChart(item)}
-            disabled={item.stock <= 0}
-            style={{
-                flex: 1,
-                padding: "12px",
-                background: item.stock > 0 ? "#3A6F43" : "#333",
-                border: "none",
-                borderRadius: "14px",
-                color: "#fff",
-                fontWeight: "500",
-                cursor: item.stock > 0 ? "pointer" : "not-allowed",
-                transition: "0.2s ease",
-            }}
-        >
-            + Keranjang
-        </button>
+                                            {/* BUTTON AREA */}
+                                            <div
+                                                style={{
+                                                    marginTop: "20px",
+                                                    display: "flex",
+                                                    gap: "10px",
+                                                }}
+                                            >
+                                                {auth.user && auth.user.id === 3 ? (
+                                                    <button
+                                                    onClick={() =>
+                                                        addToChart(item)
+                                                    }
+                                                    disabled={item.stock <= 0}
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: "12px",
+                                                        background:
+                                                            item.stock > 0
+                                                                ? "#3A6F43"
+                                                                : "#333",
+                                                        border: "none",
+                                                        borderRadius: "14px",
+                                                        color: "#fff",
+                                                        fontWeight: "500",
+                                                        cursor:
+                                                            item.stock > 0
+                                                                ? "pointer"
+                                                                : "not-allowed",
+                                                        transition: "0.2s ease",
+                                                    }}
+                                                >
+                                                    + Keranjang
+                                                </button>
+                                                ) : (
+                                                    <></>
+                                                )}
 
-        <Link
-            href={`/gallery-detail/${item.id}`}
-            style={{
-                flex: 1,
-                padding: "12px",
-                border: "1px solid #2a2a2a",
-                borderRadius: "14px",
-                color: "#fff",
-                textAlign: "center",
-                fontSize: "14px",
-            }}
-        >
-            Detail
-        </Link>
-    </div>
-</div>
-
+                                                <Link
+                                                    href={`/gallery-detail/${item.id}`}
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: "12px",
+                                                        border: "1px solid #2a2a2a",
+                                                        borderRadius: "14px",
+                                                        color: "#fff",
+                                                        textAlign: "center",
+                                                        fontSize: "14px",
+                                                    }}
+                                                >
+                                                    Detail
+                                                </Link>
+                                            </div>
+                                        </div>
                                     ))}
                                 </div>
                             </div>
