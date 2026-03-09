@@ -1,0 +1,77 @@
+@startuml Auth_Activity_Diagram
+' ============================================
+' Activity Diagram - Authentication & Authorization
+' ============================================
+title Activity Diagram - Authentication & Authorization Flow
+
+|User|
+start
+:Access Application;
+if (Has Account?) then (yes)
+  :Enter Email & Password;
+  |System|
+  :Validate Credentials;
+  if (Credentials Valid?) then (yes)
+    :Check Email Verification;
+    if (Email Verified?) then (yes)
+      :Create Session;
+      :Check User Role;
+      if (Role = Super Admin?) then (Super Admin)
+        :Grant Full Access;
+      elseif (Role = Admin?) then (Admin)
+        :Grant Admin Access;
+      elseif (Role = Cashier?) then (Cashier)
+        :Grant Cashier Access;
+      elseif (Role = Customer?) then (Customer)
+        :Grant Customer Access;
+      endif
+      :Load Permissions;
+      :Redirect to Dashboard;
+    else (no)
+      :Send Verification Email;
+      :Show Verification Required;
+      stop
+    endif
+  else (no)
+    :Show Invalid Credentials;
+    if (Too Many Attempts?) then (yes)
+      :Apply Rate Limiting;
+      :Show Cooldown Timer;
+    endif
+    stop
+  endif
+else (no)
+  :Click Register;
+  :Enter Registration Data;
+  |System|
+  :Validate Email Uniqueness;
+  if (Email Available?) then (yes)
+    #Pink:Hash Password;
+    #Pink:Create User Record;
+    :Send Verification Email;
+    :Show Registration Success;
+    :Verify Email;
+  else (no)
+    :Show Email Exists Error;
+    stop
+  endif
+endif
+
+|User|
+:Access Protected Resource;
+|System|
+:Check Authentication;
+if (Authenticated?) then (yes)
+  :Check Authorization;
+  if (Has Permission?) then (yes)
+    :Grant Access;
+  else (no)
+    :Return 403 Forbidden;
+    :Log Unauthorized Attempt;
+  endif
+else (no)
+  :Redirect to Login;
+endif
+
+stop
+@enduml

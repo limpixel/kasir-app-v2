@@ -117,19 +117,23 @@ export default function Welcome({ auth, laravelVersion, phpVersion }) {
                                         Home
                                     </Link>
 
-                                    <Link
-                                        href="/gallery"
-                                        className="text-gray-200 hover:text-white transition-colors font-medium"
-                                    >
-                                        Gallery
-                                    </Link>
+                                    {auth.user && auth.user.id === 3 ? (
+                                        <Link
+                                            href="/gallery"
+                                            className="text-gray-200 hover:text-white transition-colors font-medium"
+                                        >
+                                            Gallery
+                                        </Link>
+                                    ) : (
+                                        <></>
+                                    )}
 
                                     {auth.user && auth.user.id === 3 ? (
                                         <Link
                                             href="/cart"
                                             className="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white"
                                         >
-                                            Chart
+                                            Cart
                                         </Link>
                                     ) : (
                                         <></>
@@ -602,7 +606,7 @@ export default function Welcome({ auth, laravelVersion, phpVersion }) {
                             <div className="column xl-12 section-header-wrap">
                                 <div className="section-header" data-num="03">
                                     <h2 className="text-display-title">
-                                        Gallery
+                                        Stock
                                     </h2>
                                 </div>
                             </div>
@@ -721,7 +725,7 @@ export default function Welcome({ auth, laravelVersion, phpVersion }) {
                     </section>
 
                     {/* testimonials section */}
-                    <section
+                    {/* <section
                         id="testimonials"
                         className="container s-testimonials"
                     >
@@ -840,7 +844,7 @@ export default function Welcome({ auth, laravelVersion, phpVersion }) {
                                 </div>
                             </div>
                         </div>
-                    </section>
+                    </section> */}
 
                     {/* footer section */}
                     <footer id="footer" className="container s-footer">

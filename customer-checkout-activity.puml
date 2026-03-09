@@ -1,0 +1,94 @@
+@startuml Customer_Checkout_Activity
+' ============================================
+' Activity Diagram - Customer Checkout Flow
+' ============================================
+title Activity Diagram - Customer Checkout Process
+legend right
+  | Icon | Description |
+  | <#LightGreen>Green</color> | Customer Activity |
+  | <#Orange>Orange</color> | System Process |
+  | <#Pink>Pink</color> | Database Operation |
+endlegend
+
+|Customer|
+start
+:Visit Homepage;
+:Browse Products;
+if (Want to Login?) then (yes)
+  :Login/Register;
+  if (Email Verified?) then (yes)
+    :Access Profile;
+    :Update Address Info;
+  else (no)
+    :Verify Email;
+  endif
+else (no)
+  :Continue as Guest;
+endif
+
+:View Product Gallery;
+:View Product Details;
+:Add to Cart;
+:Manage Cart Items;
+:Proceed to Checkout;
+
+|System|
+<#Orange>Load Checkout Page;</color>
+<#Pink>Load Cart from Session;</color>
+
+|Customer|
+:Select Delivery Address;
+if (Address from Profile?) then (yes)
+  :Auto-fill Address;
+else (no)
+  :Input New Address;
+endif
+
+:Select Delivery Method;
+note right
+  Delivery Options:
+  - Reguler
+  - Express
+  - Same Day
+end note
+
+|System|
+<#Orange>Calculate Shipping Cost;</color>
+<#Orange>Update Grand Total;</color>
+
+|Customer|
+:Select Payment Method;
+if (Payment Method?) then (COD)
+  :Confirm Order;
+  |System|
+  :Create Transaction (COD);
+  <#Pink>Save Transaction Record;</color>
+  <#Pink>Update Product Stock;</color>
+  :Redirect to WhatsApp;
+  :Send Message to Admin;
+elseif (Transfer/QRIS/E-Wallet)
+  :Upload Payment Proof;
+  |System|
+  <#Orange>Validate Payment Proof;</color>
+  if (Payment Valid?) then (yes)
+    <#Pink>Update Transaction Status;</color>
+    :Send Confirmation;
+    :Process Order;
+  else (no)
+    :Request Re-upload;
+    stop
+  endif
+endif
+
+|Customer|
+:View Order Status;
+:Track Order;
+if (Order Delivered?) then (yes)
+  :Receive Order;
+  :Complete Transaction;
+else (no)
+  :Wait for Delivery;
+endif
+
+stop
+@enduml

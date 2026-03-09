@@ -1,0 +1,73 @@
+@startuml User_Activity_Diagram
+' ============================================
+' Activity Diagram - User Flow (Customer & Admin)
+' ============================================
+title Activity Diagram - User Transaction Flow
+
+start
+
+:Login;
+note right
+  Single login untuk:
+  - Customer
+  - Admin/Cashier
+end note
+
+if (User Role?) then (Customer)
+  |Customer|
+  :Browse Produk;
+  :Tambah ke Cart;
+  :Checkout;
+  :Input Alamat Pengiriman;
+  :Pilih Metode Pembayaran;
+  
+  if (Ada Kendala?) then (Ya)
+    :Hubungi Admin via WhatsApp;
+    :Admin Respon;
+    :Lanjutkan Transaksi;
+  else (Tidak)
+    :Konfirmasi Order;
+  endif
+  
+  if (Metode Pembayaran?) then (COD)
+    :Bayar di Tempat;
+    :Admin Proses Order;
+  elseif (Transfer/QRIS/E-Wallet)
+    :Upload Bukti Pembayaran;
+    :Tunggu Verifikasi Admin;
+    if (Verifikasi OK?) then (Ya)
+      :Admin Proses Order;
+    else (Tidak)
+      :Upload Ulang Bukti;
+    endif
+  endif
+  
+  :Order Diproses Admin;
+  :Paket Dikirim;
+  :Terima Order;
+  
+else (Admin/Cashier)
+  |Admin|
+  :Access Dashboard;
+  
+  split
+    :Kelola Produk;
+    :CRUD Produk;
+    :Upload Gambar;
+    :Generate Barcode;
+  split again
+    :Kelola Transaksi;
+    :Verifikasi Pembayaran;
+    :Proses Order Customer;
+    :Update Status Order;
+    :Koordinasi Pengiriman;
+  split again
+    :Lihat Laporan;
+    :View Transaksi History;
+    :Analytics;
+  end split
+  
+endif
+
+stop
+@enduml

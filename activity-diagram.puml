@@ -1,0 +1,112 @@
+@startuml POS_System_Activity_Diagram
+' ============================================
+' Activity Diagram - Aplikasi Kasir (POS)
+' ============================================
+title Activity Diagram - Sistem Point of Sales (POS)
+legend right
+  | Icon | Description |
+  | <#LightBlue>Blue</color> | Admin/Cashier Activity |
+  | <#LightGreen>Green</color> | Customer Activity |
+  | <#Orange>Orange</color> | System Process |
+  | <#Pink>Pink</color> | Database Operation |
+endlegend
+
+|Admin/Cashier|
+start
+:Login;
+if (Credentials Valid?) then (yes)
+  :Access Dashboard;
+  split
+    :Manage Products;
+    if (Action?) then (Create)
+      :Input Product Data;
+      :Upload Product Image;
+      :Generate Barcode;
+      :Save to Database;
+    elseif (Update)
+      :Edit Product;
+      :Update Stock/Price;
+      :Save Changes;
+    elseif (Delete)
+      :Confirm Delete;
+      :Remove Product;
+    endif
+    :Return to Dashboard;
+  split again
+    :Manage Categories;
+    if (CRUD Operation) then (Create/Update/Delete)
+      :Process Category;
+    endif
+    :Return to Dashboard;
+  split again
+    :Manage Customers;
+    if (CRUD Operation) then (Create/Update/Delete)
+      :Process Customer Data;
+    endif
+    :Return to Dashboard;
+  split again
+    :Process Transaction (POS);
+    |System|
+    fork
+      :Search Product\n(by Name/Barcode);
+      :Display Results;
+    fork again
+      :Add to Cart;
+      <#Pink>Validate Stock;</color>
+      if (Stock Available?) then (yes)
+        <#Pink>Save to Cart Table;</color>
+      else (no)
+        :Show Error;
+        stop
+      endif
+    fork again
+      :Manage Cart Items;
+      :Edit Quantity;
+      :Remove Items;
+    end fork
+    |Admin/Cashier|
+    :Input Customer Info;
+    :Apply Discount;
+    :Enter Cash Amount;
+    |System|
+    :Calculate Grand Total;
+    :Calculate Change;
+    if (Payment Valid?) then (yes)
+      <#Orange>Generate Invoice Number;</color>
+      fork
+        <#Pink>Create Transaction Record;</color>
+        <#Pink>Create Transaction Details;</color>
+      fork again
+        <#Pink>Update Product Stock;</color>
+      fork again
+        <#Pink>Calculate & Save Profit;</color>
+      end fork
+      <#Orange>Clear Cart;</color>
+      :Generate Invoice/Receipt;
+      :Print Receipt;
+      :Transaction Recorded;
+    else (no)
+      :Show Payment Error;
+      stop
+    endif
+    :Return to Dashboard;
+  split again
+    :View Transaction History;
+    :Search/Filter Transactions;
+    :View Transaction Detail;
+    if (Need Reprint?) then (yes)
+      :Reprint Invoice;
+    endif
+    :Return to Dashboard;
+  split again
+    :View Analytics/Reports;
+    :View Profit Reports;
+    :View Top Products/Customers;
+  end split
+else (no)
+  :Show Login Error;
+  stop
+endif
+
+stop
+@enduml

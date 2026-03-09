@@ -1,0 +1,149 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+
+' Actor definitions
+actor "Customer" as customer
+actor "Admin/Cashier" as admin
+
+' System boundary
+rectangle "Aplikasi Kasir (POS System)" {
+  
+  ' === Customer Use Cases ===
+  usecase "Browse Produk" as UC_Browse
+  usecase "Lihat Gallery Produk" as UC_Gallery
+  usecase "Detail Produk" as UC_ProductDetail
+  usecase "Search Produk" as UC_Search
+  usecase "Register" as UC_Register
+  usecase "Login" as UC_Login
+  usecase "Update Profil" as UC_UpdateProfile
+  usecase "Kelola Alamat" as UC_ManageAddress
+  usecase "Tambah ke Cart" as UC_AddToCart
+  usecase "Kelola Cart" as UC_ManageCart
+  usecase "Checkout" as UC_Checkout
+  usecase "Pilih Alamat Pengiriman" as UC_SelectAddress
+  usecase "Pilih Metode Pengiriman" as UC_SelectShipping
+  usecase "Pilih Pembayaran" as UC_SelectPayment
+  usecase "Upload Bukti Pembayaran" as UC_UploadProof
+  usecase "WhatsApp Admin" as UC_WhatsApp
+  usecase "Track Order" as UC_TrackOrder
+  usecase "Lihat Riwayat Transaksi" as UC_CustomerHistory
+  
+  ' === Admin/Cashier Use Cases ===
+  usecase "Login" as UC_AdminLogin
+  usecase "View Dashboard" as UC_Dashboard
+  usecase "Kelola Produk" as UC_ManageProduct
+  usecase "Kelola Kategori" as UC_ManageCategory
+  usecase "Kelola Customer" as UC_ManageCustomer
+  usecase "Kelola User & Role" as UC_ManageUser
+  usecase "Transaksi/Checkout (POS)" as UC_POS
+  usecase "Search Product (POS)" as UC POSSearch
+  usecase "Add to Cart (POS)" as UC_POSAddCart
+  usecase "Process Checkout" as UC_ProcessCheckout
+  usecase "Print Invoice" as UC_PrintInvoice
+  usecase "Lihat Riwayat Transaksi" as UC_TransactionHistory
+  usecase "Filter & Search Transaksi" as UC_FilterTransaction
+  usecase "View Detail Transaksi" as UC_ViewTransactionDetail
+  usecase "Reprint Invoice" as UC_ReprintInvoice
+  usecase "Lihat Laporan Profit" as UC_ProfitReport
+  usecase "Analytics Dashboard" as UC_Analytics
+  usecase "Update Profil" as UC_AdminProfile
+  usecase "Change Password" as UC_ChangePassword
+  
+  ' === Shared Use Cases ===
+  usecase "Logout" as UC_Logout
+}
+
+' === Customer Relationships ===
+customer -- UC_Browse
+customer -- UC_Gallery
+customer -- UC_ProductDetail
+customer -- UC_Search
+customer -- UC_Register
+customer -- UC_Login
+customer -- UC_UpdateProfile
+customer -- UC_ManageAddress
+customer -- UC_AddToCart
+customer -- UC_ManageCart
+customer -- UC_Checkout
+customer -- UC_SelectAddress
+customer -- UC_SelectShipping
+customer -- UC_SelectPayment
+customer -- UC_UploadProof
+customer -- UC_WhatsApp
+customer -- UC_TrackOrder
+customer -- UC_CustomerHistory
+customer -- UC_Logout
+
+' === Admin/Cashier Relationships ===
+admin -- UC_AdminLogin
+admin -- UC_Dashboard
+admin -- UC_ManageProduct
+admin -- UC_ManageCategory
+admin -- UC_ManageCustomer
+admin -- UC_ManageUser
+admin -- UC_POS
+admin -- UC POSSearch
+admin -- UC_POSAddCart
+admin -- UC_ProcessCheckout
+admin -- UC_PrintInvoice
+admin -- UC_TransactionHistory
+admin -- UC_FilterTransaction
+admin -- UC_ViewTransactionDetail
+admin -- UC_ReprintInvoice
+admin -- UC_ProfitReport
+admin -- UC_Analytics
+admin -- UC_AdminProfile
+admin -- UC_ChangePassword
+admin -- UC_Logout
+
+' === Customer Use Case Relationships ===
+UC_Browse ..> UC_Gallery : includes
+UC_Gallery ..> UC_ProductDetail : includes
+UC_ProductDetail ..> UC_AddToCart : includes
+UC_Search ..> UC_ProductDetail : includes
+UC_Register ..> UC_UpdateProfile : extends
+UC_Login ..> UC_Logout : extends
+UC_UpdateProfile ..> UC_ManageAddress : includes
+UC_Checkout ..> UC_SelectAddress : includes
+UC_Checkout ..> UC_SelectShipping : includes
+UC_Checkout ..> UC_SelectPayment : includes
+UC_SelectPayment ..> UC_UploadProof : extends
+UC_SelectPayment ..> UC_WhatsApp : extends
+UC_Checkout ..> UC_TrackOrder : extends
+UC_CustomerHistory ..> UC_TrackOrder : includes
+
+' === Admin Use Case Relationships ===
+UC_AdminLogin ..> UC_Logout : extends
+UC_Dashboard ..> UC_Analytics : includes
+UC_ManageProduct ..> UC_ManageCategory : includes
+UC_POS ..> UC POSSearch : includes
+UC_POS ..> UC_POSAddCart : includes
+UC_POS ..> UC_ProcessCheckout : includes
+UC_ProcessCheckout ..> UC_PrintInvoice : extends
+UC_TransactionHistory ..> UC_FilterTransaction : includes
+UC_TransactionHistory ..> UC_ViewTransactionDetail : includes
+UC_ViewTransactionDetail ..> UC_ReprintInvoice : extends
+UC_Dashboard ..> UC_ProfitReport : includes
+
+' === Cross-Actor Relationships (System Interaction) ===
+UC_Checkout ..> UC_ProcessCheckout : triggers
+UC_CustomerHistory ..> UC_TransactionHistory : relates
+UC_PrintInvoice ..> UC_ReprintInvoice : relates
+
+note top of customer
+  **Customer**
+  - Browse tanpa login
+  - Perlu akun untuk checkout
+  - COD/Transfer/QRIS/E-Wallet
+end note
+
+note top of admin
+  **Admin/Cashier**
+  - Full access system
+  - Manage data master
+  - Process POS transactions
+  - View reports & analytics
+end note
+
+@endum

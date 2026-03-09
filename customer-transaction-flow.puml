@@ -1,0 +1,85 @@
+@startuml Customer_Transaction_Flow
+' ============================================
+' Activity Diagram - Customer Transaction Detail
+' ============================================
+title Activity Diagram - Customer Transaction Process
+
+|Customer|
+start
+:Login/Register;
+
+|System|
+:Validasi Credentials;
+:Redirect ke Homepage;
+
+|Customer|
+:Browse Produk;
+:View Detail Produk;
+:Tambah ke Cart;
+:View Cart;
+:Checkout;
+
+|System|
+:Load Checkout Page;
+:Calculate Total;
+
+|Customer|
+:Input Alamat Pengiriman;
+:Pilih Kurir (Reguler/Express/Same Day);
+
+if (Ada Kendala/Input Error?) then (Ya)
+  :Klik Tombol WhatsApp;
+  :Chat dengan Admin;
+  :Tanya Masalah;
+  
+  |Admin|
+  :Respon via WhatsApp;
+  :Bantu Customer;
+  
+  |Customer|
+  :Kembali ke Checkout;
+  :Lanjutkan Transaksi;
+else (Tidak)
+  :Pilih Pembayaran;
+endif
+
+if (Pilih Pembayaran?) then (COD)
+  :Konfirmasi Order;
+  :Order Masuk (Status: Pending);
+  
+  |Admin|
+  :Verifikasi Order;
+  :Proses Order;
+  :Kirim Paket;
+  
+  |Customer|
+  :Bayar di Tempat;
+  :Terima Paket;
+  
+elseif (Transfer/QRIS/E-Wallet)
+  :Upload Bukti Transfer;
+  :Order Masuk (Status: Menunggu Verifikasi);
+  
+  |Admin|
+  :Cek Bukti Transfer;
+  
+  if (Bukti Valid?) then (Ya)
+    :Verifikasi OK;
+    :Update Status: Processing;
+    :Proses Order;
+    :Kirim Paket;
+  else (Tidak)
+    :Tolak Bukti;
+    :Notifikasi Customer;
+    
+    |Customer|
+    :Upload Ulang Bukti;
+  endif
+endif
+
+|Customer|
+:Terima Paket;
+:Transaksi Selesai;
+
+stop
+@enduml
